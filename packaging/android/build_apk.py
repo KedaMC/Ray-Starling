@@ -34,7 +34,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 
-APPLICATION_ID = "io.github.juanluci.starling"
+APPLICATION_ID = "com.raystarling.strong"
 LABEL = "Starling"
 # --dev and --preview: an app of its own, installed beside the release (which a build signed with
 # another key cannot install over), with its own folder (StarlingActivity.sharedFolder: "Ray Starling",
