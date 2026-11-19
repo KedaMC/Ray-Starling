@@ -139,16 +139,15 @@ public class StarlingActivity extends NativeActivity {
     private volatile boolean drawn;
 
     /** Shared storage's Starling folder when the player allowed the app to use it, else null:
-     *  "Ray Starling" for Ray Starling (build_apk.py --dev) and StarlingPreview for Starling Preview
-     *  (--preview), which keep out of the release's. */
+     *  This fork uses "Ray Starling"; Starling Preview keeps its separate folder. */
     static String sharedFolder(Context context) {
         boolean allowed = Build.VERSION.SDK_INT >= 30
                 ? Environment.isExternalStorageManager()
                 : context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
                         == PackageManager.PERMISSION_GRANTED;
         String id = context.getPackageName();
-        String name = id.endsWith(".dev") ? "Ray Starling"
-                : id.endsWith(".preview") ? "StarlingPreview" : "Starling";
+        String name = id.endsWith(".preview") ? "StarlingPreview"
+                : id.equals("com.raystarling.strong") ? "Ray Starling" : "Starling";
         return allowed
                 ? new File(Environment.getExternalStorageDirectory(), name).getPath()
                 : null;
