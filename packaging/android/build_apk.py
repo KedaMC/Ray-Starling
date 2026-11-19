@@ -11,7 +11,7 @@ horizon-prepare makes from the player's own copy are made on the phone, or copie
     python3 packaging/android/build_apk.py --no-build      # package the library built last
     python3 packaging/android/build_apk.py --install       # and adb install it
     python3 packaging/android/build_apk.py --zip           # and a zip of it to send
-    python3 packaging/android/build_apk.py --dev           # Starling Dev, beside the release
+    python3 packaging/android/build_apk.py --dev           # Ray Starling, beside the release
     python3 packaging/android/build_apk.py --preview       # Starling Preview, the organisation's CI build
 
 Needs the Android SDK (ANDROID_HOME, else the default folder) with the build-tools, platform and
@@ -37,10 +37,11 @@ HERE = Path(__file__).resolve().parent
 APPLICATION_ID = "io.github.juanluci.starling"
 LABEL = "Starling"
 # --dev and --preview: an app of its own, installed beside the release (which a build signed with
-# another key cannot install over), with its own folder (StarlingActivity.sharedFolder: StarlingDev,
+# another key cannot install over), with its own folder (StarlingActivity.sharedFolder: "Ray Starling",
 # StarlingPreview) and its own sign-in and game files. Preview is what starling-client/starling's
 # CI builds, signed with that repository's test key: the release key stays out of it.
 DEV_SUFFIX = ".dev"
+DEV_LABEL = "Ray Starling"  # the Dev variant's app name; its shared folder is "Ray Starling" too
 VARIANTS = {"dev": (DEV_SUFFIX, " Dev"), "preview": (".preview", " Preview")}
 VERSION_NAME = "0.8.0"
 VERSION_CODE = 13
@@ -213,7 +214,7 @@ def link_resources(aapt2, android_jar, out, assets, variant, abi=ABI):
     manifest = (HERE / "AndroidManifest.xml").read_text(encoding="utf-8")
     suffix, label_suffix = VARIANTS[variant] if variant else ("", "")
     application_id = APPLICATION_ID + suffix
-    label = LABEL + label_suffix
+    label = DEV_LABEL if variant == "dev" else LABEL + label_suffix
     manifest = manifest.replace("@APPLICATION_ID@", application_id).replace("@LABEL@", label)
     if abi != ABI:
         # Additional architectures may expose GLES only. Validate actual GPU limits.
@@ -315,7 +316,7 @@ def main():
     )
     parser.add_argument(
         "--dev", action="store_true",
-        help=f"Starling Dev ({APPLICATION_ID}{DEV_SUFFIX}), installed beside the release",
+        help=f"Ray Starling ({APPLICATION_ID}{DEV_SUFFIX}), installed beside the release",
     )
     parser.add_argument(
         "--preview", action="store_true",

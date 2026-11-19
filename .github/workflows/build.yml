@@ -1,6 +1,6 @@
 name: build
-# Ray Starling's own APK build, for this fork's branches. It builds the Dev variant
-# (build_apk.py --dev: io.github.juanluci.starling.dev, its own StarlingDev folder), which installs
+# Ray Starling's own APK build, for this fork's branches. It builds the Dev variant, named Ray Starling
+# (build_apk.py --dev: io.github.juanluci.starling.dev, its own "Ray Starling" folder), which installs
 # beside Starling's release and preview apps. Signed with the key in the repository secret
 # STARLING_DEBUG_KEYSTORE_BASE64 (alias horizon-debug, password android) so one build installs over the
 # last; without the secret each build gets a throwaway key. Only arm64-v8a by default; run it by hand
