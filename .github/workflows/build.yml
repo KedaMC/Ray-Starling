@@ -1,0 +1,108 @@
+name: build
+# Ray Starling's own APK build, for this fork's branches. It builds the Dev variant
+# (build_apk.py --dev: io.github.juanluci.starling.dev, its own StarlingDev folder), which installs
+# beside Starling's release and preview apps. Signed with the key in the repository secret
+# STARLING_DEBUG_KEYSTORE_BASE64 (alias horizon-debug, password android) so one build installs over the
+# last; without the secret each build gets a throwaway key. Only arm64-v8a by default; run it by hand
+# to pick other ABIs. Upstream's release and preview pipeline stays in android.yml.
+on:
+  push:
+    branches: [starling, 'feat/**']
+  workflow_dispatch:
+    inputs:
+      abis:
+        description: ABIs to build, separated by spaces (arm64-v8a armeabi-v7a x86 x86_64)
+        type: string
+        default: arm64-v8a
+      keep_symbols:
+        description: Ship the library unstripped, for a profiler (simpleperf)
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.abis.outputs.matrix }}
+    steps:
+      - id: abis
+        env:
+          ABIS: ${{ inputs.abis || 'arm64-v8a' }}
+        run: |
+          python3 - <<'EOF' >> "$GITHUB_OUTPUT"
+          import json, os
+          targets = {
+              "arm64-v8a": "aarch64-linux-android",
+              "armeabi-v7a": "armv7-linux-androideabi",
+              "x86": "i686-linux-android",
+              "x86_64": "x86_64-linux-android",
+          }
+          abis = os.environ["ABIS"].split() or ["arm64-v8a"]
+          unknown = [a for a in abis if a not in targets]
+          if unknown:
+              raise SystemExit(f"unknown ABI: {' '.join(unknown)}")
+          include = [{"abi": a, "target": targets[a]} for a in dict.fromkeys(abis)]
+          print("matrix=" + json.dumps({"include": include}))
+          EOF
+  apk:
+    needs: plan
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      # JDK 25 compiles the original exporters; the build-tools supply d8 and apksigner.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Install the build-tools, platform and NDK build_apk.py pins
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install \
+            "build-tools;35.0.0" "platforms;android-36" "ndk;28.2.13676358" > /dev/null
+      - name: Install Rust for Android and cargo-ndk
+        run: |
+          rustup toolchain install stable --profile minimal --target ${{ matrix.target }}
+          rustup default stable
+          cargo install cargo-ndk --version 3.5.4 --locked
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ray-android-${{ matrix.abi }}
+          save-if: ${{ github.ref == 'refs/heads/starling' }}
+      # Where build_apk.py keeps its debug key (alias horizon-debug, password android).
+      - name: Unpack the debug key
+        env:
+          KEYSTORE: ${{ secrets.STARLING_DEBUG_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$KEYSTORE" || exit 0
+          mkdir -p target/android
+          echo "$KEYSTORE" | base64 -d > target/android/debug.keystore
+      - name: Build the APK
+        env:
+          HORIZON_ANDROID_KEY_ALIAS: horizon-debug
+          HORIZON_ANDROID_STORE_PASSWORD: android
+          HORIZON_ANDROID_KEY_PASSWORD: android
+        run: |
+          python packaging/android/build_apk.py --abi "${{ matrix.abi }}" --profile quick --dev \
+            ${{ inputs.keep_symbols && '--keep-symbols' || '' }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ray-starling-apk-${{ matrix.abi }}
+          path: target/android/starling-*.apk
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ray-starling-symbols-${{ matrix.abi }}
+          path: target/android/lib*-symbols.so
+          if-no-files-found: ignore
+          retention-days: 30
