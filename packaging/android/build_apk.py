@@ -36,13 +36,10 @@ HERE = Path(__file__).resolve().parent
 
 APPLICATION_ID = "com.raystarling.strong"
 LABEL = "Starling"
-# --dev and --preview: an app of its own, installed beside the release (which a build signed with
-# another key cannot install over), with its own folder (StarlingActivity.sharedFolder: "Ray Starling",
-# StarlingPreview) and its own sign-in and game files. Preview is what starling-client/starling's
-# CI builds, signed with that repository's test key: the release key stays out of it.
-DEV_SUFFIX = ".dev"
-DEV_LABEL = "Ray Starling"  # the Dev variant's app name; its shared folder is "Ray Starling" too
-VARIANTS = {"dev": (DEV_SUFFIX, " Dev"), "preview": (".preview", " Preview")}
+# --dev keeps the Ray Starling label, but uses the same package ID as the regular build.
+# Preview remains a separate install with its own folder and game files.
+DEV_LABEL = "Ray Starling"
+VARIANTS = {"dev": ("", " Dev"), "preview": (".preview", " Preview")}
 VERSION_NAME = "0.8.0"
 VERSION_CODE = 13
 MIN_SDK = 26  # AAudio (cpal)
@@ -316,7 +313,7 @@ def main():
     )
     parser.add_argument(
         "--dev", action="store_true",
-        help=f"Ray Starling ({APPLICATION_ID}{DEV_SUFFIX}), installed beside the release",
+        help=f"Ray Starling ({APPLICATION_ID}), same package ID as the regular build",
     )
     parser.add_argument(
         "--preview", action="store_true",
