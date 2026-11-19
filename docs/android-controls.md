@@ -34,6 +34,8 @@ gestures remain available. Inventory Shift/Control include the control system's
 latched modifiers and held custom keys. Foreground/focus changes release touch
 owners through the existing input paths.
 
+**Importing a PojavLauncher or ZalithLauncher layout:** open its control `.json` with Starling (file manager, share sheet or **Open with**). A file with `mControlDataList` becomes a GoyControl preset under `controls/goycontrol/`, listed in **H > Controls**; it is not activated for you. Key codes map to the game's key names, PRI/SEC/MID and the wheel become mouse actions, Menu becomes Escape, and the first joystick sets the movement control. Position expressions (`${right}`, `${margin}`, `dp()`...) are evaluated on a 2400x1080 reference screen and stored as fractions. Drawers, the on-screen keyboard and the hide-controls button have no equivalent and are left out; a button keeps its first three keys. The importer is `android_controls/pojav_import.rs`.
+
 This is independent of account management. It uses the current game's settings
 folder; selecting an account does not select a control preset. Existing Starling
 `touch-layout.json` files are preserved, but are not imported into the new preset

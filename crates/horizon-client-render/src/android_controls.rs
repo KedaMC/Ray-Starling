@@ -36,6 +36,7 @@ pub mod editor;
 pub use custom::CustomButton;
 pub use editor::{Editor, EditorDragKind, PickerStep};
 pub mod layout;
+pub mod pojav_import;
 pub use layout::{
     Control, ControlStyle, JoystickMoveArea, JoystickStyle, Mode, Placement, PresetMeta, Settings,
 };

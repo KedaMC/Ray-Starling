@@ -30,6 +30,8 @@ pub enum Kind {
     Bedrock,
     /// A PNG: a player skin for `skins/` (`own_skin`).
     Skin,
+    /// A touch-control layout saved by PojavLauncher or ZalithLauncher: a GoyControl preset.
+    ControlLayout,
     Unknown,
 }
 
@@ -52,6 +54,9 @@ pub fn classify(path: &Path) -> (Kind, String) {
         && crate::own_skin::is_png(&head)
     {
         return (Kind::Skin, String::new());
+    }
+    if is_control_layout(path) {
+        return (Kind::ControlLayout, String::new());
     }
     let Some(names) = File::open(path)
         .ok()
@@ -104,6 +109,16 @@ pub fn classify(path: &Path) -> (Kind, String) {
         return (Kind::ShaderPack, prefix);
     }
     (Kind::Unknown, String::new())
+}
+
+/// A small JSON file holding a PojavLauncher-family control layout.
+fn is_control_layout(path: &Path) -> bool {
+    const LIMIT: u64 = 4 << 20;
+    fs::metadata(path).is_ok_and(|m| m.len() <= LIMIT)
+        && fs::read(path).is_ok_and(|b| {
+            b.iter().find(|c| !c.is_ascii_whitespace()) == Some(&b'{')
+                && crate::android_controls::pojav_import::looks_like_pojav(&b)
+        })
 }
 
 /// The next complete file of the inbox as a custom button's picture, taken out of it: any size,
@@ -235,6 +250,29 @@ pub fn install(path: &Path, name: &str, places: &Places) -> Result<Installed, St
             made = Some(to);
             format!("Skin \"{title}\" added and put on")
         }
+        Kind::ControlLayout => {
+            use crate::android_controls::{Settings, pojav_import};
+            let bytes = fs::read(path).map_err(fail)?;
+            let layout =
+                pojav_import::convert(&bytes).map_err(|e| format!("{name} can't be added: {e}"))?;
+            let notes = match (layout.skipped, layout.dropped_events) {
+                (0, 0) => String::new(),
+                (s, 0) => format!(", {s} left out"),
+                (0, d) => format!(", {d} extra keys dropped"),
+                (s, d) => format!(", {s} left out, {d} extra keys dropped"),
+            };
+            let preset = Settings::import_preset(
+                layout.settings,
+                &places.game,
+                &title,
+                "Imported from PojavLauncher/ZalithLauncher",
+            )
+            .map_err(fail)?;
+            format!(
+                "Control layout \"{}\" added ({} buttons{notes}): pick it in H > Controls > GoyControl",
+                preset.name, layout.buttons
+            )
+        }
         Kind::Bedrock => {
             return Err(format!(
                 "{name} is Bedrock Edition content: this game plays Java Edition packs, worlds and mods"
@@ -243,7 +281,7 @@ pub fn install(path: &Path, name: &str, places: &Places) -> Result<Installed, St
         Kind::Unknown => {
             return Err(format!(
                 "the game does not know what {name} is: it takes resource packs, shader packs, \
-                 worlds and mods as .zip or .starling, and skins as .png"
+                 worlds and mods as .zip or .starling, skins as .png, and control layouts as .json"
             ));
         }
     };
@@ -598,6 +636,36 @@ mod tests {
         assert!(!places.game.join("escaped.txt").exists());
 
         assert!(install(&dir.join("addon.mcaddon"), "addon.mcaddon", &places).is_err());
+    }
+
+    #[test]
+    fn a_pojav_control_layout_becomes_a_goycontrol_preset() {
+        let dir = scratch("controls");
+        let places = Places {
+            game: dir.join("game"),
+            resources: dir.join("private/resources"),
+        };
+        let layout = dir.join("My Layout.json");
+        fs::write(
+            &layout,
+            br#"{"version":8,"scaledAt":100.0,"mDrawerDataList":[],"mJoystickDataList":[],
+            "mControlDataList":[{"name":"JUMP","dynamicX":"${right}","dynamicY":"${bottom}",
+            "keycodes":[32,-1,-1,-1],"width":50.0,"height":50.0}]}"#,
+        )
+        .unwrap();
+        assert_eq!(classify(&layout).0, Kind::ControlLayout);
+        let done = install(&layout, "My Layout.json", &places).unwrap();
+        assert_eq!(done.kind, Kind::ControlLayout);
+        let presets = crate::android_controls::Settings::list_presets(
+            &places.game,
+            crate::android_controls::ControlStyle::GoyControl,
+        );
+        assert!(presets.iter().any(|p| p.name == "My Layout"));
+
+        let other = dir.join("settings.json");
+        fs::write(&other, br#"{"layouts":[]}"#).unwrap();
+        assert_eq!(classify(&other).0, Kind::Unknown);
+        assert!(install(&other, "settings.json", &places).is_err());
     }
 
     #[test]

@@ -454,6 +454,7 @@ fn done_title(kind: Kind) -> &'static str {
         Kind::ShaderPack => "Shader pack imported",
         Kind::Mod | Kind::NativeMod => "Mod imported",
         Kind::Skin => "Skin imported",
+        Kind::ControlLayout => "Control layout imported",
         Kind::Resources => "Minecraft resources imported",
         Kind::Bedrock | Kind::Unknown => "Imported",
     }
@@ -599,7 +600,7 @@ fn icon(kind: Kind) -> &'static [&'static str] {
         Kind::ResourcePack | Kind::DataPack | Kind::ShaderPack => PACK,
         Kind::Mod | Kind::NativeMod => GEAR,
         Kind::Skin => FACE,
-        Kind::Resources | Kind::Bedrock | Kind::Unknown => BOX,
+        Kind::ControlLayout | Kind::Resources | Kind::Bedrock | Kind::Unknown => BOX,
     }
 }
 
