@@ -1,9 +1,8 @@
-//! Horizon's graphics settings screen: every video setting, vanilla's and
-//! Horizon's, on one list of pages (General, Quality, Performance, Advanced,
-//! HDR) with a page list beside it, a search field over it and a description
-//! of the hovered setting with its cost. Which settings it shows, in what
-//! pages, with what description and cost, and its input live here; how it
-//! looks comes from `graphics_style`.
+//! Horizon's own graphics settings screen: its settings on pages (General,
+//! Quality, Performance, Advanced and HDR), with a page list, search field
+//! and descriptions. Vanilla video settings remain in Video Settings.
+//! Which Horizon settings it shows, their descriptions and input live here;
+//! how it looks comes from `graphics_style`.
 use crate::{
     graphics::{
         EntityCullingMode, FarDetail, FrameGeneration, GraphicsApi, LeafCullingMode, Overlay,
@@ -117,13 +116,6 @@ pub struct Setting {
     pub cost: Cost,
     pub text: &'static str,
 }
-fn v(opt: Opt, cost: Cost, text: &'static str) -> Setting {
-    Setting {
-        item: Item::Vanilla(opt),
-        cost,
-        text,
-    }
-}
 fn h(opt: H, cost: Cost, text: &'static str) -> Setting {
     Setting {
         item: Item::Horizon(opt),
@@ -156,11 +148,6 @@ pub fn rows() -> Vec<(Page, Vec<(&'static str, Vec<Setting>)>)> {
                 (
                     "Distance",
                     vec![
-                        v(
-                            Opt::RenderDistance,
-                            High,
-                            "Full-detail terrain range. LOD Distance can extend local worlds farther.",
-                        ),
                         h(
                             H::LodDistance,
                             Medium,
@@ -177,47 +164,16 @@ pub fn rows() -> Vec<(Page, Vec<(&'static str, Vec<Setting>)>)> {
                             None,
                             "How far around you BlueMap tiles are downloaded. Next join.",
                         ),
-                        v(
-                            Opt::SimulationDistance,
-                            Medium,
-                            "How far mobs, crops and machines keep working. CPU time.",
-                        ),
-                        v(Opt::Gamma, None, "Brightens dark places."),
                     ],
                 ),
                 (
                     "Display",
                     vec![
-                        v(Opt::GuiScale, None, "Size of menus and the HUD."),
-                        v(Opt::Fullscreen, None, "Fills the screen (borderless)."),
-                        v(
-                            Opt::Vsync,
-                            None,
-                            "Waits for the display's refresh: no tearing, a little latency.",
-                        ),
-                        v(
-                            Opt::MaxFps,
-                            None,
-                            "Caps frames per second; a cap saves power and heat.",
-                        ),
-                        v(
-                            Opt::InactivityFps,
-                            None,
-                            "Lowers the frame rate when minimised, or idle too.",
-                        ),
-                        v(
-                            Opt::Fov,
-                            Low,
-                            "Field of view. Wider shows more terrain at once.",
-                        ),
                     ],
                 ),
                 (
                     "Interface",
                     vec![
-                        v(Opt::ViewBobbing, None, "Sways the view while walking."),
-                        v(Opt::AttackIndicator, None, "Shows attack cooldown."),
-                        v(Opt::Autosave, None, "Shows when the world saves."),
                     ],
                 ),
             ],
@@ -228,12 +184,6 @@ pub fn rows() -> Vec<(Page, Vec<(&'static str, Vec<Setting>)>)> {
                 (
                     "Sky and weather",
                     vec![
-                        v(
-                            Opt::Clouds,
-                            Low,
-                            "Cloud layer: off, flat (fast) or 3D (fancy).",
-                        ),
-                        v(Opt::CloudRange, Low, "How far clouds reach, in chunks."),
                         h(H::Sky, Low, "Draws the sky, sun, moon and stars."),
                         h(
                             H::Fog,
@@ -241,59 +191,16 @@ pub fn rows() -> Vec<(Page, Vec<(&'static str, Vec<Setting>)>)> {
                             "Distance fog. Off shows the edge of the loaded world.",
                         ),
                         h(H::Weather, High, "Draws rain and snow."),
-                        v(
-                            Opt::WeatherRadius,
-                            Medium,
-                            "How far rain and snow fall around you.",
-                        ),
-                        v(Opt::Particles, Medium, "How many particles effects spawn."),
                     ],
                 ),
                 (
                     "Lighting and entities",
                     vec![
-                        v(
-                            Opt::SmoothLighting,
-                            Low,
-                            "Soft shadows in corners. Costs chunk building time only.",
-                        ),
-                        v(
-                            Opt::BiomeBlend,
-                            Low,
-                            "Blends grass and water colours across biomes when building chunks.",
-                        ),
-                        v(
-                            Opt::EntityDistance,
-                            Medium,
-                            "How far away mobs and items are drawn, as a share of normal.",
-                        ),
-                        v(
-                            Opt::EntityShadows,
-                            Low,
-                            "Round shadows under mobs and items.",
-                        ),
-                        v(Opt::Vignette, None, "Darkens the screen's edges."),
-                        v(Opt::ChunkFade, None, "Fades newly loaded chunks in."),
                     ],
                 ),
                 (
                     "Textures",
                     vec![
-                        v(
-                            Opt::Mipmaps,
-                            None,
-                            "Smaller copies of block textures for distant terrain: less shimmer.",
-                        ),
-                        v(
-                            Opt::CutoutLeaves,
-                            Medium,
-                            "Leaves with see-through gaps. Off draws them solid.",
-                        ),
-                        v(
-                            Opt::ImprovedTransparency,
-                            Medium,
-                            "Sorts water and glass more exactly behind each other.",
-                        ),
                         h(
                             H::AnimatedTextures,
                             Low,
@@ -344,11 +251,6 @@ pub fn rows() -> Vec<(Page, Vec<(&'static str, Vec<Setting>)>)> {
                 (
                     "Chunk loading",
                     vec![
-                        v(
-                            Opt::ChunkBuilder,
-                            Low,
-                            "Which chunk rebuilds wait for the frame: none, nearby or yours.",
-                        ),
                         h(
                             H::ChunkUpdates,
                             Low,
@@ -546,6 +448,11 @@ pub fn rows() -> Vec<(Page, Vec<(&'static str, Vec<Setting>)>)> {
                 });
             }
         }
+    }
+    // Vanilla video options are available only in Video Settings. Keep the
+    // Graphics screen focused on Horizon's own settings and drop empty groups.
+    for (_, groups) in &mut pages {
+        groups.retain(|(_, rows)| !rows.is_empty());
     }
     pages
 }
@@ -2343,25 +2250,17 @@ mod tests {
     }
 
     #[test]
-    fn one_screen_holds_every_video_setting_once_with_a_short_description() {
+    fn graphics_screen_contains_only_horizon_settings_once() {
         let all = items();
         for (i, (_, item)) in all.iter().enumerate() {
             assert!(!all[..i].iter().any(|(_, x)| x == item), "{item:?} twice");
-        }
-        // Vanilla's Video Settings options are here beside Horizon's.
-        for opt in [
-            Opt::RenderDistance,
-            Opt::Vsync,
-            Opt::GuiScale,
-            Opt::Clouds,
-            Opt::Mipmaps,
-        ] {
-            assert!(all.iter().any(|(_, i)| *i == Item::Vanilla(opt)), "{opt:?}");
+            assert!(matches!(item, Item::Horizon(_)), "vanilla setting leaked into Graphics: {item:?}");
         }
         for page in Page::ALL {
             assert!(all.iter().any(|(p, _)| *p == page), "{page:?} is empty");
         }
         for (_, groups) in rows() {
+            assert!(groups.iter().all(|(_, rows)| !rows.is_empty()));
             for r in groups.into_iter().flat_map(|(_, rows)| rows) {
                 assert!(!r.text.is_empty() && r.text.len() < 80, "{:?}", r.item);
             }
@@ -2439,7 +2338,7 @@ mod tests {
     fn a_finger_scrolls_from_a_stepped_row_and_drags_a_slider() {
         let s = Settings::default();
         let mut ui = GraphicsUi::default();
-        let [x, y, w, h] = row(&mut ui, &s, Item::Vanilla(Opt::Clouds));
+        let [x, y, w, h] = row(&mut ui, &s, Item::Horizon(H::Preset));
         assert!(ui.row_button_at(&s, SIZE, (x + w - 10.0, y + h / 2.0)));
         let [x, y, w, h] = row(&mut ui, &s, Item::Horizon(H::ChunkUpdates));
         assert!(!ui.row_button_at(&s, SIZE, (x + w - 10.0, y + h / 2.0)));
@@ -2467,7 +2366,7 @@ mod tests {
         let [x, y, ..] = cols.search();
         press(&mut ui, &mut s, (x + 4.0, y + 4.0));
         assert!(ui.typing());
-        for c in ["c", "l", "o", "u", "d"] {
+        for c in ["b", "l", "u", "e", "m", "a", "p"] {
             ui.key_modifiers(&mut s, K::KeyA, Some(c), false, SIZE, FB);
         }
         let (_, lines, _) = ui.layout(&s, SIZE.0, SIZE.1);
@@ -2477,15 +2376,18 @@ mod tests {
             .collect();
         assert_eq!(
             found,
-            [Item::Vanilla(Opt::Clouds), Item::Vanilla(Opt::CloudRange)]
+            [
+                Item::Horizon(H::BlueMapAutoDetect),
+                Item::Horizon(H::BlueMapRadius)
+            ]
         );
-        assert!(lines.iter().all(|l| l.page == Page::Quality));
+        assert!(lines.iter().all(|l| l.page == Page::General));
         // Words of a description find it too.
-        ui.search.set_value("tearing");
+        ui.search.set_value("distance fog");
         let (_, lines, _) = ui.layout(&s, SIZE.0, SIZE.1);
         assert!(lines.iter().any(|l| {
             l.setting
-                .is_some_and(|r| r.item == Item::Vanilla(Opt::Vsync))
+                .is_some_and(|r| r.item == Item::Horizon(H::Fog))
         }));
         ui.search.set_value("hdr");
         let [x, y, w, h] = cols.page(4);
@@ -2667,15 +2569,15 @@ mod tests {
     fn the_wheel_scrolls_and_stops_at_both_ends_without_changing_values() {
         let mut s = Settings::default();
         let mut ui = GraphicsUi::default();
-        s.fov = 90.0;
-        let fov = row(&mut ui, &s, Item::Vanilla(Opt::Fov));
+        s.horizon.chunk_updates = 32;
+        let chunk_updates = row(&mut ui, &s, Item::Horizon(H::ChunkUpdates));
         // A slider being changed doesn't take the wheel either: a controller scrolls with it.
-        press(&mut ui, &mut s, (fov[0] + 4.0, fov[1] + 4.0));
+        press(&mut ui, &mut s, (chunk_updates[0] + 4.0, chunk_updates[1] + 4.0));
         assert!(ui.can_change_value);
         let before = ui.scroll.amount;
         ui.scroll(&s, SIZE, -1.0);
         assert_eq!(ui.scroll.amount, before + 18.0);
-        assert_eq!(s.fov, 90.0);
+        assert_eq!(s.horizon.chunk_updates, 32);
         let (cols, _, content) = ui.layout(&s, SIZE.0, SIZE.1);
         ui.scroll(&s, SIZE, -1000.0);
         assert_eq!(ui.scroll.amount, content - (cols.bottom - cols.top));
@@ -2710,11 +2612,11 @@ mod tests {
             y >= cols.top && y + style::ROW <= cols.bottom
         };
         // General's last row, against the bottom of the view, then Up: the row over it.
-        let last = Item::Vanilla(Opt::Autosave);
+        let last = Item::Horizon(H::BlueMapRadius);
         row(&mut ui, &s, last);
         ui.focus = Some(Target::Item(last));
         ui.key_modifiers(&mut s, K::ArrowUp, None, false, SIZE, FB);
-        let indicator = Item::Vanilla(Opt::AttackIndicator);
+        let indicator = Item::Horizon(H::BlueMapAutoDetect);
         assert_eq!(ui.focus, Some(Target::Item(indicator)));
         assert!(in_view(&mut ui, &s, indicator));
         // Left leaves the plate.
@@ -2791,7 +2693,7 @@ mod tests {
     }
 
     #[test]
-    fn rows_split_vanilla_labels_into_name_and_value() {
+    fn rows_split_horizon_labels_into_name_and_value() {
         let s = Settings::default();
         let (name, value) = parts(Item::Horizon(H::LodDistance), &s, false);
         assert_eq!(
@@ -2820,11 +2722,11 @@ mod tests {
         assert_eq!(item.label(&s).plain(), "LOD Distance: Off");
         assert_eq!(item.slider(&s), Some(0.0));
         let items: Vec<_> = items().into_iter().map(|(_, i)| i).collect();
-        let render = items
-            .iter()
-            .position(|i| *i == Item::Vanilla(Opt::RenderDistance))
-            .unwrap();
-        assert_eq!(items[render + 1], item);
+        assert!(items.contains(&item));
+        assert_eq!(
+            items[items.iter().position(|i| *i == item).unwrap() + 1],
+            Item::Horizon(H::FarDetail)
+        );
         // Every stop is reachable and reads back as the same position.
         for (i, &distance) in LOD_STEPS.iter().enumerate() {
             let at = i as f32 / (LOD_STEPS.len() - 1) as f32;
@@ -2848,10 +2750,7 @@ mod tests {
         // A distance between stops (from the file) sits on the next one.
         s.horizon.lod_distance = 3000;
         assert_eq!(item.slider(&s), Some(7.0 / 17.0));
-        assert_eq!(
-            Item::Vanilla(Opt::RenderDistance).label(&s).plain(),
-            format!("Full Detail Distance: {near} chunks")
-        );
+        assert_eq!(s.render_distance, near, "LOD control leaves vanilla render distance unchanged");
     }
 
     #[test]
@@ -3183,10 +3082,7 @@ mod tests {
                         for (group, rows) in groups {
                             lang::get(group);
                             for row in rows {
-                                // Vanilla's captions are vanilla's keys, not loaded here.
-                                if let Item::Horizon(_) = row.item {
-                                    row.item.label(&s);
-                                }
+                                row.item.label(&s);
                                 let text = description(row.item, &s, row.text);
                                 lang::get(text);
                                 lang::get(row.cost.label());

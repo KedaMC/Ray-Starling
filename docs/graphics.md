@@ -2,12 +2,12 @@
 
 ## Settings
 
-Horizon's graphics settings are one screen, opened from **Options → Horizon Settings → Graphics...**, the only entry (Shader Packs is beside it). Vanilla's Video Settings screen stays as vanilla draws it.
+Horizon's graphics settings are opened from **Options → Horizon Settings → Graphics...**, the only entry (Shader Packs is beside it). Vanilla's **Video Settings** remains the place to access and change Minecraft's built-in video options.
 
-The screen holds vanilla's video options and Horizon's own together, built from Minecraft's own screen patterns in the design system's Blocks palette (`docs/design-system.md`), on see-through panels so the world stays in view:
+The Graphics screen contains Horizon's own settings only, built from Minecraft's screen patterns in the design system's Blocks palette (`docs/design-system.md`), on see-through panels so the world stays in view:
 
 - Down the left, under the Horizon mark: the search field, the pages (General, Quality, Performance, Advanced and HDR) as a column of names, and **Undo** and **Done** at the foot.
-- On the right, a plate shows the open page alone, under its name: its settings in titled groups (Distance, Display, Culling...), each group on a panel of its own. A row has the setting's name on the left and its control on the right: a tick box for on and off, a value between arrows that a press steps through, a value whose slider (a thin track under the value) shows while the row is pointed at or focused. A setting that can't be used now is greyed.
+- On the right, a plate shows the open page alone, under its name: its settings in titled groups (Distance, Sky and weather, Culling...), each group on a panel of its own. A row has the setting's name on the left and its control on the right: a tick box for on and off, a value between arrows that a press steps through, a value whose slider (a thin track under the value) shows while the row is pointed at or focused. A setting that can't be used now is greyed.
 - The search field shows the settings of every page whose name or description has the words typed, under their page's name; picking a page then scrolls to its matches.
 - A strip under the plate holds the hovered or focused setting's name, its cost in frame time (no cost, low, medium, high, or saves time for culling that makes frames faster) and what it does; with none, what the open page holds.
 - Undo shows once something changed; it puts back every setting as it was when the screen opened.
@@ -19,18 +19,15 @@ Every setting applies at once, except worker threads, the graphics API and trans
 ![Video Settings, with Horizon's buttons at the top](media/settings-simple.png)
 ![The graphics settings screen](media/settings-graphics.png)
 
-| Page | Setting | Stored in |
+| Page | Horizon setting | Stored in |
 | --- | --- | --- |
-| General | render distance, simulation distance, brightness, GUI scale, fullscreen, VSync, max framerate, inactivity framerate, FOV, view bobbing, attack indicator, autosave indicator | `options.txt` (vanilla keys) |
-| | preset, LOD distance, far detail, BlueMap finding and radius (on servers, at the next join) | `horizon-graphics.txt` |
-| Quality | clouds, cloud distance, weather radius, particles, smooth lighting, biome blend, entity distance, entity shadows, vignette, chunk fade, mipmap levels, cutout leaves, improved transparency | `options.txt` |
-| | sky, fog, weather, animated textures, distant plant dither (`ditherCutoutMips`, off by default: cutouts from 64 texels up), resolution scale, anti-aliasing (FXAA or TAA), TAA upscaling, screenshot quality, frame generation | `horizon-graphics.txt` |
-| Performance | chunk builder | `options.txt` |
-| | chunk updates and upload budget per frame, worker threads, cave culling, entity culling mode, leaf culling, shadow cache, battery mode, and the block-entity caches (shulker boxes, signs, decorated pots, bells, chests, banners, copper golem statues) | `horizon-graphics.txt` |
+| General | preset, LOD distance, far detail, BlueMap finding and radius (on servers, at the next join) | `horizon-graphics.txt` |
+| Quality | sky, fog, weather, animated textures, distant plant dither (`ditherCutoutMips`, off by default: cutouts from 64 texels up), resolution scale, anti-aliasing (FXAA or TAA), TAA upscaling, screenshot quality, frame generation | `horizon-graphics.txt` |
+| Performance | chunk updates and upload budget per frame, worker threads, cave culling, entity culling mode, leaf culling, shadow cache, battery mode, and the block-entity caches (shulker boxes, signs, decorated pots, bells, chests, banners, copper golem statues) | `horizon-graphics.txt` |
 | Advanced | present mode, frame pacing, graphics API, translucent batching, performance overlay (FPS, frame/CPU/GPU times, frame-time graph) | `horizon-graphics.txt` |
 | HDR | HDR, calibration, black level, peak brightness, paper white, UI brightness, a shortcut key to the page | `horizon-graphics.txt` |
 
-`options.txt` keeps exactly vanilla's keys and values, so the options harness still compares it with vanilla; Horizon's settings live in `horizon-graphics.txt` beside it. Their defaults render as vanilla does: cave culling on, entity and leaf culling off, no upload budgets, sky, fog and weather on, 100% resolution, no anti-aliasing, HDR off, the present mode following VSync. VSync on always waits for the display (Fifo), in a window and in fullscreen, as in vanilla; the present mode setting chooses how frames are shown only while VSync is off. Frame pacing defaults to Efficient: the limiter sleeps through the last half millisecond where vanilla spins, and paces frames on a fixed grid of slots (vanilla starts each slot when the thread wakes up, so every late wake-up lengthens a frame), which changes timing, not pixels.
+Vanilla's video options remain in **Video Settings** and continue to use `options.txt`, with their existing keys and values. Horizon's settings remain in `horizon-graphics.txt` beside it; no vanilla setting implementation or storage is removed. Their defaults render as vanilla does: cave culling on, entity and leaf culling off, no upload budgets, sky, fog and weather on, 100% resolution, no anti-aliasing, HDR off, the present mode following VSync. VSync on always waits for the display (Fifo), in a window and in fullscreen, as in vanilla; the present mode setting chooses how frames are shown only while VSync is off. Frame pacing defaults to Efficient: the limiter sleeps through the last half millisecond where vanilla spins, and paces frames on a fixed grid of slots (vanilla starts each slot when the thread wakes up, so every late wake-up lengthens a frame), which changes timing, not pixels.
 
 **Entity Culling** is off by default and disabled with non-vanilla resource packs. It applies to entity models; block entities keep their section and per-block frustum culling and use the separate Block Entities caches. Synchronous mode uses the existing same-frame CPU test. Asynchronous mode checks meshes on a worker and uses a result only when the camera and mesh bounds still match and the opaque chunks and rendered sections that proved occlusion are unchanged and ready. Until then, it leaves the mesh visible. Both modes leave simulation and interaction unchanged; older `entityCulling:true` settings select Synchronous.
 
