@@ -2,7 +2,7 @@
 
 ## Settings
 
-Horizon's graphics settings are one screen, opened from the top of **Video Settings** (**Horizon Graphics...** opens it at General, **Advanced Graphics...** at Advanced) or from **Options → Horizon Settings...**. Vanilla's Video Settings screen stays as vanilla draws it.
+Horizon's graphics settings are one screen, opened from **Options → Horizon Settings → Graphics...**, the only entry (Shader Packs is beside it). Vanilla's Video Settings screen stays as vanilla draws it.
 
 The screen holds vanilla's video options and Horizon's own together, built from Minecraft's own screen patterns in the design system's Blocks palette (`docs/design-system.md`), on see-through panels so the world stays in view:
 

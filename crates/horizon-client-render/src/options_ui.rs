@@ -3442,14 +3442,7 @@ impl OptionsUi {
                 vec![
                     Row::Buttons(
                         open("horizon.pages.open.graphics", Page::Graphics),
-                        Some(open(
-                            "horizon.pages.open.graphics_advanced",
-                            Page::GraphicsAdvanced,
-                        )),
-                    ),
-                    Row::Buttons(
-                        open("horizon.pages.open.shader_packs", Page::ShaderPacks),
-                        Some(open("horizon.pages.open.controller", Page::Controller)),
+                        Some(open("horizon.pages.open.shader_packs", Page::ShaderPacks)),
                     ),
                     Row::Buttons(
                         open("horizon.pages.open.extras", Page::Extras),
@@ -3644,34 +3637,8 @@ impl OptionsUi {
                 rows
             }
             Page::Video => {
-                // Horizon's graphics settings screen, at General and at Advanced.
-                let mut rows = vec![Row::Buttons(
-                    button(
-                        0.0,
-                        0.0,
-                        150.0,
-                        tr("horizon.pages.open.horizon_graphics"),
-                        Act::Push(Page::Graphics),
-                    ),
-                    Some(button(
-                        0.0,
-                        0.0,
-                        150.0,
-                        tr("horizon.pages.open.graphics_advanced"),
-                        Act::Push(Page::GraphicsAdvanced),
-                    )),
-                )];
-                rows.push(Row::Buttons(
-                    button(
-                        0.0,
-                        0.0,
-                        310.0,
-                        Text::literal("Shader Packs..."),
-                        Act::Push(Page::ShaderPacks),
-                    ),
-                    None,
-                ));
-                rows.push(Row::Header("options.video.display.header"));
+                // Graphics and Shader Packs live only under Horizon Settings.
+                let mut rows = vec![Row::Header("options.video.display.header")];
                 // A phone's app always fills its screen.
                 let display: &[Opt] = if cfg!(target_os = "android") {
                     &[
@@ -9530,9 +9497,7 @@ mod tests {
             pushes(&mut ui),
             [
                 Page::Graphics,
-                Page::GraphicsAdvanced,
                 Page::ShaderPacks,
-                Page::Controller,
                 Page::Extras,
                 Page::Mods,
                 Page::SplitSetup,
@@ -9566,8 +9531,8 @@ mod tests {
         // Vanilla's own pages keep the Horizon pages they had.
         ui.stack = vec![Page::Main, Page::Video];
         let video = pushes(&mut ui);
-        for page in [Page::Graphics, Page::GraphicsAdvanced] {
-            assert!(video.contains(&page), "{page:?}");
+        for page in [Page::Graphics, Page::GraphicsAdvanced, Page::ShaderPacks] {
+            assert!(!video.contains(&page), "{page:?}");
         }
         ui.stack = vec![Page::Main, Page::Controls];
         assert!(pushes(&mut ui).contains(&Page::Controller));
