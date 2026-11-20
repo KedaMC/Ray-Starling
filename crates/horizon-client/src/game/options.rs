@@ -419,7 +419,7 @@ impl Game<'_> {
                 Event::ButtonClick => self.audio.play_button_click(),
                 Event::Changed => {
                     #[cfg(target_os = "android")]
-                    self.mobile_options_apply();
+                    self.mobile_options_apply(true);
                     self.settings.save(&Self::options_path());
                     self.apply_settings();
                     self.sync_agent_control();
@@ -427,7 +427,7 @@ impl Game<'_> {
                 }
                 Event::SliderDrag => {
                     #[cfg(target_os = "android")]
-                    self.mobile_options_apply();
+                    self.mobile_options_apply(false);
                     self.apply_settings();
                 }
                 // Options.createSoundSliderOptionInstance: the preview plays
@@ -449,6 +449,8 @@ impl Game<'_> {
                 Event::PlayMusicTrack(event, track) => self.play_music_track(&event, &track),
                 Event::Close if self.ui.options.resource_error.is_some() => {}
                 Event::Close => {
+                    #[cfg(target_os = "android")]
+                    self.mobile_options_apply(true);
                     self.settings.save(&Self::options_path());
                     let to_game = std::mem::take(&mut self.options_to_game);
                     self.screen = if std::mem::take(&mut self.options_to_world_options) {
