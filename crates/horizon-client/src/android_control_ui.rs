@@ -1876,7 +1876,7 @@ impl TouchUi {
             }
         }
 
-        // Handle ongoing sensitivity slider drag on Tab 0 (Recommended)
+        // Handle ongoing touch-look sensitivity slider drag on Tab 2 (Aiming)
         if self.sensitivity_dragging {
             match phase {
                 TouchPhase::Moved => {
@@ -1892,7 +1892,7 @@ impl TouchUi {
             }
         }
 
-        // Handle ongoing virtual-mouse-speed slider drag on Tab 0 (Recommended)
+        // Handle ongoing virtual-mouse-speed slider drag on Tab 1 (Controls)
         if self.mouse_speed_dragging {
             match phase {
                 TouchPhase::Moved => {
@@ -1909,7 +1909,7 @@ impl TouchUi {
             }
         }
 
-        // Handle ongoing pointer-size slider drag on Tab 0 (Recommended)
+        // Handle ongoing pointer-size slider drag on Tab 1 (Controls)
         if self.pointer_size_dragging {
             match phase {
                 TouchPhase::Moved => {
@@ -2287,7 +2287,7 @@ impl TouchUi {
                 }
             }
 
-            // Check if touch started on a slider or quick chip in Tab 0 (Recommended)
+            // Check if touch started on the resolution slider or a quick chip in Tab 0 (Recommended)
             if self.hub_tab == 0 && inside(content_pane) {
                 let body_y = body_top - self.hub_scroll;
                 let res_card_y = body_y + 18.0;
@@ -2309,16 +2309,12 @@ impl TouchUi {
                     self.slider_gesture = Some((id, p, InGameMenuAction::SetResolutionScale(pct)));
                     return Some(InGameMenuAction::Close);
                 }
-                let sens_card_y = body_y + 118.0;
-                if inside([cx, sens_card_y, cw, 50.0]) {
-                    self.sensitivity_dragging = true;
-                    let t = hub_slider_t(p[0], cx, cw);
-                    let sens = (0.10 + t * 2.90).clamp(0.10, 3.00);
-                    self.slider_gesture =
-                        Some((id, p, InGameMenuAction::SetTouchSensitivity(sens)));
-                    return Some(InGameMenuAction::Close);
-                }
-                let spd_card_y = body_y + 230.0;
+            }
+
+            // Check if touch started on a Virtual Mouse slider in Tab 1 (Controls)
+            if self.hub_tab == 1 && inside(content_pane) {
+                let body_y = body_top - self.hub_scroll;
+                let spd_card_y = body_y + 264.0;
                 if inside([cx, spd_card_y, cw, 50.0]) {
                     self.mouse_speed_dragging = true;
                     let t = hub_slider_t(p[0], cx, cw);
@@ -2329,7 +2325,7 @@ impl TouchUi {
                     ));
                     return Some(InGameMenuAction::Close);
                 }
-                let size_card_y = body_y + 288.0;
+                let size_card_y = body_y + 322.0;
                 if inside([cx, size_card_y, cw, 50.0]) {
                     self.pointer_size_dragging = true;
                     let t = hub_slider_t(p[0], cx, cw);
@@ -2342,10 +2338,19 @@ impl TouchUi {
                 }
             }
 
-            // Check if touch started on the Gyroscope Sensitivity slider in Tab 2 (Aiming)
+            // Check if touch started on the Touch Look or Gyroscope slider in Tab 2 (Aiming)
             if self.hub_tab == 2 && inside(content_pane) {
                 let body_y = body_top - self.hub_scroll;
-                let gyro_card_y = body_y + 18.0 + 54.0 * 6.0;
+                let sens_card_y = body_y + 18.0 + 54.0 * 5.0;
+                if inside([cx, sens_card_y, cw, 50.0]) {
+                    self.sensitivity_dragging = true;
+                    let t = hub_slider_t(p[0], cx, cw);
+                    let sens = (0.10 + t * 2.90).clamp(0.10, 3.00);
+                    self.slider_gesture =
+                        Some((id, p, InGameMenuAction::SetTouchSensitivity(sens)));
+                    return Some(InGameMenuAction::Close);
+                }
+                let gyro_card_y = body_y + 400.0;
                 if inside([cx, gyro_card_y, cw, 50.0]) {
                     self.gyro_sensitivity_dragging = true;
                     let t = hub_slider_t(p[0], cx, cw);
@@ -2387,7 +2392,7 @@ impl TouchUi {
         let body_y = body_top - self.hub_scroll;
         match self.hub_tab {
             0 => {
-                // Tab 0: Recommended (resolution, touch look and the virtual mouse)
+                // Tab 0: Recommended (resolution scale only)
                 let res_y = body_y + 18.0;
                 let chip_y = res_y + 48.0;
                 let chip_gap = 6.0;
@@ -2404,23 +2409,6 @@ impl TouchUi {
                     let t = ((p[0] - sl_x) / sl_w).clamp(0.0, 1.0);
                     let pct = (25.0 + t * 75.0).round() as u32;
                     return Some(InGameMenuAction::SetResolutionScale(pct.clamp(25, 100)));
-                }
-                let sens_y = body_y + 118.0;
-                if inside([cx, sens_y, cw, 50.0]) {
-                    let t = hub_slider_t(p[0], cx, cw);
-                    let sens = (0.10 + t * 2.90).clamp(0.10, 3.00);
-                    return Some(InGameMenuAction::SetTouchSensitivity(sens));
-                }
-                if inside([cx, body_y + 176.0, cw, 46.0]) {
-                    return Some(InGameMenuAction::ToggleVirtualMouse);
-                }
-                if inside([cx, body_y + 230.0, cw, 50.0]) {
-                    let t = hub_slider_t(p[0], cx, cw);
-                    return Some(InGameMenuAction::SetVirtualMouseSpeed(0.25 + t * 2.75));
-                }
-                if inside([cx, body_y + 288.0, cw, 50.0]) {
-                    let t = hub_slider_t(p[0], cx, cw);
-                    return Some(InGameMenuAction::SetVirtualMousePointerSize(0.5 + t * 1.5));
                 }
             }
             1 => {
@@ -2448,6 +2436,17 @@ impl TouchUi {
                 if inside([cx, body_y + 136.0, cw, 46.0]) {
                     return Some(InGameMenuAction::PresetVisibilityAll);
                 }
+                if inside([cx, body_y + 210.0, cw, 46.0]) {
+                    return Some(InGameMenuAction::ToggleVirtualMouse);
+                }
+                if inside([cx, body_y + 264.0, cw, 50.0]) {
+                    let t = hub_slider_t(p[0], cx, cw);
+                    return Some(InGameMenuAction::SetVirtualMouseSpeed(0.25 + t * 2.75));
+                }
+                if inside([cx, body_y + 322.0, cw, 50.0]) {
+                    let t = hub_slider_t(p[0], cx, cw);
+                    return Some(InGameMenuAction::SetVirtualMousePointerSize(0.5 + t * 1.5));
+                }
             }
             2 => {
                 // Tab 2: Movement, aiming and gyroscope
@@ -2469,10 +2468,15 @@ impl TouchUi {
                 if inside(row(4.0)) {
                     return Some(InGameMenuAction::ToggleInteractionLook);
                 }
-                if inside(row(5.0)) {
+                if inside([cx, body_y + 18.0 + step * 5.0, cw, 50.0]) {
+                    let t = hub_slider_t(p[0], cx, cw);
+                    let sens = (0.10 + t * 2.90).clamp(0.10, 3.00);
+                    return Some(InGameMenuAction::SetTouchSensitivity(sens));
+                }
+                if inside([cx, body_y + 346.0, cw, row_h]) {
                     return Some(InGameMenuAction::ToggleGyro);
                 }
-                if inside([cx, body_y + 18.0 + step * 6.0, cw, 50.0]) {
+                if inside([cx, body_y + 400.0, cw, 50.0]) {
                     let t = hub_slider_t(p[0], cx, cw);
                     return Some(InGameMenuAction::SetGyroSensitivity(0.10 + t * 2.90));
                 }
@@ -2755,9 +2759,9 @@ impl TouchUi {
         // Scrollable Right Content Panel with scissor clip and tab transition slide
         let tab_slide = (1.0 - tab_ease) * 14.0;
         let content_height = match self.hub_tab {
-            0 => 350.0,
-            1 => 196.0,
-            2 => 404.0,
+            0 => 108.0,
+            1 => 384.0,
+            2 => 462.0,
             3 => 346.0,
             _ => 120.0,
         };
@@ -2820,7 +2824,7 @@ impl TouchUi {
 
         match self.hub_tab {
             0 => {
-                // Tab 0: Recommended (resolution, touch look and the virtual mouse)
+                // Tab 0: Recommended (resolution scale only)
                 ui.text(
                     Face::SemiBold,
                     10.2,
@@ -2901,43 +2905,6 @@ impl TouchUi {
                         &format!("{pct}%"),
                     );
                 }
-                ui.text(
-                    Face::SemiBold,
-                    10.2,
-                    cx,
-                    body_y + 102.0,
-                    muted_c,
-                    "TOUCH LOOK & VIRTUAL MOUSE",
-                );
-                draw_slider_card(
-                    &mut ui,
-                    body_y + 118.0,
-                    "Touch Look Sensitivity",
-                    &format!("{:.0}%", settings.sensitivity * 100.0),
-                    (settings.sensitivity - 0.10) / 2.90,
-                );
-                draw_toggle_row(
-                    &mut ui,
-                    body_y + 176.0,
-                    "Virtual Mouse Button",
-                    "Off by default; enable for desktop pointer in menus & inventory",
-                    Some(settings.virtual_mouse_enabled),
-                    None,
-                );
-                draw_slider_card(
-                    &mut ui,
-                    body_y + 230.0,
-                    "Virtual Mouse Speed",
-                    &format!("{:.0}%", settings.virtual_mouse_sensitivity * 100.0),
-                    (settings.virtual_mouse_sensitivity - 0.25) / 2.75,
-                );
-                draw_slider_card(
-                    &mut ui,
-                    body_y + 288.0,
-                    "Pointer Size",
-                    &format!("{:.0}%", settings.virtual_mouse_pointer_scale * 100.0),
-                    (settings.virtual_mouse_pointer_scale - 0.5) / 1.5,
-                );
             }
             1 => {
                 // 1. Control Mode Section
@@ -3038,6 +3005,36 @@ impl TouchUi {
                     None,
                     None,
                 );
+                ui.text(
+                    Face::SemiBold,
+                    10.2,
+                    cx,
+                    body_y + 192.0,
+                    muted_c,
+                    "VIRTUAL MOUSE",
+                );
+                draw_toggle_row(
+                    &mut ui,
+                    body_y + 210.0,
+                    "Virtual Mouse Button",
+                    "Off by default; enable for desktop pointer in menus & inventory",
+                    Some(settings.virtual_mouse_enabled),
+                    None,
+                );
+                draw_slider_card(
+                    &mut ui,
+                    body_y + 264.0,
+                    "Virtual Mouse Speed",
+                    &format!("{:.0}%", settings.virtual_mouse_sensitivity * 100.0),
+                    (settings.virtual_mouse_sensitivity - 0.25) / 2.75,
+                );
+                draw_slider_card(
+                    &mut ui,
+                    body_y + 322.0,
+                    "Pointer Size",
+                    &format!("{:.0}%", settings.virtual_mouse_pointer_scale * 100.0),
+                    (settings.virtual_mouse_pointer_scale - 0.5) / 1.5,
+                );
             }
             2 => {
                 // Tab 2: Movement, aiming and gyroscope
@@ -3096,9 +3093,16 @@ impl TouchUi {
                     Some(settings.attack_button_look),
                     None,
                 );
-                draw_toggle_row(
+                draw_slider_card(
                     &mut ui,
                     body_y + 18.0 + step * 5.0,
+                    "Touch Look Sensitivity",
+                    &format!("{:.0}%", settings.sensitivity * 100.0),
+                    (settings.sensitivity - 0.10) / 2.90,
+                );
+                draw_toggle_row(
+                    &mut ui,
+                    body_y + 346.0,
                     "Gyroscope Aiming",
                     "Tilt device for fine camera and bow aiming",
                     Some(settings.gyroscope),
@@ -3106,7 +3110,7 @@ impl TouchUi {
                 );
                 draw_slider_card(
                     &mut ui,
-                    body_y + 18.0 + step * 6.0,
+                    body_y + 400.0,
                     "Gyroscope Sensitivity",
                     &format!("{:.0}%", settings.gyro_sensitivity * 100.0),
                     (settings.gyro_sensitivity - 0.10) / 2.90,
@@ -7501,12 +7505,12 @@ mod tests {
         let mut settings = crate::android_controls::Settings::default();
         let mut ui = TouchUi {
             floating_menu: true,
-            hub_tab: 0,
+            hub_tab: 1,
             ..Default::default()
         };
         ui.hub_max_scroll.set(300.);
-        // Virtual Mouse Speed card on the Recommended tab (y = 230..280).
-        let start = point(cx + cw / 2., top + 250.);
+        // Virtual Mouse Speed card on the Controls tab (y = 264..314).
+        let start = point(cx + cw / 2., top + 290.);
         assert_eq!(
             ui.floating_menu_touch(
                 &mut batch,
@@ -7524,7 +7528,7 @@ mod tests {
                 &atlas,
                 1,
                 TouchPhase::Moved,
-                point(cx + cw / 2., top + 210.),
+                point(cx + cw / 2., top + 250.),
                 &mut settings
             ),
             Some(InGameMenuAction::Close)
@@ -7536,7 +7540,7 @@ mod tests {
                 &atlas,
                 1,
                 TouchPhase::Ended,
-                point(cx + cw / 2., top + 210.),
+                point(cx + cw / 2., top + 250.),
                 &mut settings
             ),
             Some(InGameMenuAction::Close)
@@ -7553,7 +7557,7 @@ mod tests {
             &mut settings,
         );
         assert!(
-            matches!(ui.floating_menu_touch(&mut batch,&atlas,2,TouchPhase::Moved,point(cx+cw-20.,top+250.),&mut settings),Some(InGameMenuAction::SetVirtualMouseSpeed(v)) if v>2.)
+            matches!(ui.floating_menu_touch(&mut batch,&atlas,2,TouchPhase::Moved,point(cx+cw-20.,top+290.),&mut settings),Some(InGameMenuAction::SetVirtualMouseSpeed(v)) if v>2.)
         );
         ui.floating_menu_touch(
             &mut batch,
