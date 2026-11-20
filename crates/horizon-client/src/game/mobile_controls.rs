@@ -26,6 +26,8 @@ pub(super) struct MobileControls {
     pub loaded: bool,
     frame_at: Option<Instant>,
     was_in_menu: Option<bool>,
+    /// Touch settings changed on the options screen and not yet written to disk.
+    options_touch_dirty: bool,
 }
 
 impl Game<'_> {
@@ -159,12 +161,22 @@ impl Game<'_> {
         self.mobile.controls.settings.resolution_scale_percent = pct;
         self.settings.touch.resolution_scale_percent = pct;
     }
-    pub(in crate::game) fn mobile_options_apply(&mut self) {
-        self.mobile.controls.settings = self.settings.touch.clone();
+    /// Mirrors the options screen's touch settings into the live controls.
+    ///
+    /// Slider drags can emit an event for every touch movement. Persist only on a
+    /// committed change, rather than rewriting touch profiles on every frame.
+    pub(in crate::game) fn mobile_options_apply(&mut self, persist: bool) {
         self.mobile_sync_resolution_scale();
+        if self.mobile.controls.settings != self.settings.touch {
+            self.mobile.controls.settings = self.settings.touch.clone();
+            self.mobile.options_touch_dirty = true;
+        }
         self.mobile.ui.menu_direct_pointer = self.settings.touch.virtual_mouse_hidden;
         self.input_used(self.input_mode);
-        if let Err(e) = self.mobile.controls.settings.save() {
+        if persist
+            && std::mem::take(&mut self.mobile.options_touch_dirty)
+            && let Err(e) = self.mobile.controls.settings.save()
+        {
             log::warn!("Controls settings: {e}");
         }
     }
