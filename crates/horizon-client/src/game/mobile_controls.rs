@@ -1776,10 +1776,12 @@ impl Game<'_> {
             self.android_menu_touch_release(t.phase);
             return;
         }
-        let gesture =
-            self.mobile
-                .ui
-                .gesture(t.id, [t.location.x as f32, t.location.y as f32], t.phase);
+        let gesture = self.mobile.ui.gesture_at(
+            t.id,
+            p,
+            [t.location.x as f32, t.location.y as f32],
+            t.phase,
+        );
         // Gesture deltas are physical pixels / 30; lists scroll 18 GUI pixels
         // per wheel step. Convert once, independent of display GUI scale.
         let gesture = match gesture {

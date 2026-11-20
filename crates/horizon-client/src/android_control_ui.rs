@@ -798,9 +798,22 @@ impl TouchUi {
         false
     }
     /// A tap clicks on release. Other gestures are classified after the finger moves far enough.
+    /// `gui_p` is used for widget hit-testing (targets are in GUI pixels); `p` is in physical
+    /// pixels so gesture thresholds and scroll deltas do not vary with the GUI scale.
     /// A slider requires a clearly horizontal gesture before it can start dragging, so an initial
     /// vertical swipe cannot change its value.
     pub fn gesture(&mut self, id: u64, p: [f32; 2], phase: TouchPhase) -> Gesture {
+        self.gesture_at(id, p, p, phase)
+    }
+
+    /// Classify a touch using GUI coordinates for hit-testing and physical coordinates for motion.
+    pub fn gesture_at(
+        &mut self,
+        id: u64,
+        gui_p: [f32; 2],
+        p: [f32; 2],
+        phase: TouchPhase,
+    ) -> Gesture {
         if phase == TouchPhase::Cancelled {
             let release_slider = self.gesture.as_ref().is_some_and(
                 |(owner, _, _, _, mode)| *owner == id && *mode == MenuGesture::SliderDrag,
@@ -817,8 +830,8 @@ impl TouchUi {
                 let slider = crate::widgets::last_targets().iter().any(|target| {
                     let [x, y, w, h] = target.rect;
                     matches!(target.kind, crate::widgets::Kind::Slider { .. })
-                        && (x..x + w).contains(&p[0])
-                        && (y..y + h).contains(&p[1])
+                        && (x..x + w).contains(&gui_p[0])
+                        && (y..y + h).contains(&gui_p[1])
                 });
                 self.gesture = Some((id, p, p, slider, MenuGesture::Undecided));
             }
@@ -8439,6 +8452,80 @@ mod tests {
             Gesture::DragEnd
         ));
     }
+    #[test]
+    fn slider_hit_testing_uses_gui_pixels_at_scaled_touch_resolutions() {
+        crate::widgets::target_as(
+            [90.0, 90.0, 40.0, 20.0],
+            crate::widgets::Kind::Slider { value: 0.5, track: [94.0, 32.0] },
+        );
+        crate::widgets::end_frame(1);
+
+        for (index, scale) in [2.0_f32, 3.0_f32].into_iter().enumerate() {
+            let mut ui = TouchUi::default();
+            let id = index as u64 + 1;
+            let physical_start = [100.0 * scale, 100.0 * scale];
+
+            // The target is in GUI pixels; physical coordinates are scaled.
+            assert!(matches!(
+                ui.gesture_at(id, [100.0, 100.0], physical_start, TouchPhase::Started),
+                Gesture::None
+            ));
+            assert!(matches!(
+                ui.gesture_at(
+                    id,
+                    [115.0, 101.0],
+                    [physical_start[0] + 45.0, physical_start[1] + 3.0 * scale],
+                    TouchPhase::Moved,
+                ),
+                Gesture::DragStart
+            ));
+            assert!(matches!(
+                ui.gesture_at(
+                    id,
+                    [125.0, 102.0],
+                    [physical_start[0] + 75.0, physical_start[1] + 6.0 * scale],
+                    TouchPhase::Moved,
+                ),
+                Gesture::Drag
+            ));
+            assert!(matches!(
+                ui.gesture_at(
+                    id,
+                    [125.0, 102.0],
+                    [physical_start[0] + 75.0, physical_start[1] + 6.0 * scale],
+                    TouchPhase::Ended,
+                ),
+                Gesture::DragEnd
+            ));
+        }
+    }
+
+    #[test]
+    fn slider_hit_testing_still_allows_vertical_page_scroll_at_scaled_touch_resolutions() {
+        crate::widgets::target_as(
+            [90.0, 90.0, 40.0, 20.0],
+            crate::widgets::Kind::Slider { value: 0.5, track: [94.0, 32.0] },
+        );
+        crate::widgets::end_frame(1);
+
+        for (index, scale) in [2.0_f32, 3.0_f32].into_iter().enumerate() {
+            let mut ui = TouchUi::default();
+            let id = index as u64 + 10;
+            let physical_start = [100.0 * scale, 100.0 * scale];
+
+            ui.gesture_at(id, [100.0, 100.0], physical_start, TouchPhase::Started);
+            assert!(matches!(
+                ui.gesture_at(
+                    id,
+                    [102.0, 80.0],
+                    [physical_start[0] + 2.0 * scale, physical_start[1] - 60.0],
+                    TouchPhase::Moved,
+                ),
+                Gesture::Scroll(_)
+            ));
+        }
+    }
+
     #[test]
     fn tap_release_cancel_and_second_finger() {
         let mut u = TouchUi::default();
