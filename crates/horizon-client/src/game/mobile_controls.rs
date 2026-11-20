@@ -28,6 +28,10 @@ pub(super) struct MobileControls {
     was_in_menu: Option<bool>,
     /// Touch settings changed on the options screen and not yet written to disk.
     options_touch_dirty: bool,
+    /// A Control Hub slider changed the touch controls; written when the finger lifts.
+    hub_save_pending: bool,
+    /// A Control Hub slider changed the game options; written when the finger lifts.
+    hub_options_pending: bool,
 }
 
 impl Game<'_> {
@@ -160,6 +164,18 @@ impl Game<'_> {
         let pct = self.settings.horizon.resolution_scale.clamp(25, 100);
         self.mobile.controls.settings.resolution_scale_percent = pct;
         self.settings.touch.resolution_scale_percent = pct;
+    }
+    /// Control Hub sliders emit an event for every touch movement. They only mark their
+    /// settings as changed; this writes them once, after the drag is over.
+    fn mobile_hub_flush_saves(&mut self) {
+        if std::mem::take(&mut self.mobile.hub_save_pending)
+            && let Err(e) = self.mobile.controls.settings.save()
+        {
+            log::warn!("Controls settings: {e}");
+        }
+        if std::mem::take(&mut self.mobile.hub_options_pending) {
+            self.settings.save(&Self::options_path());
+        }
     }
     /// Mirrors the options screen's touch settings into the live controls.
     ///
@@ -1214,6 +1230,7 @@ impl Game<'_> {
         if t.phase == TouchPhase::Cancelled {
             self.mobile.ui.cancel();
             self.android_release_touch_keys(true);
+            self.mobile_hub_flush_saves();
             return Ok(true);
         }
         if t.phase == TouchPhase::Ended && self.mobile.ui.owns_key(t.id) {
@@ -1422,8 +1439,11 @@ impl Game<'_> {
                     self.android_sync_pointer();
                 }
                 InGameMenuAction::SetVirtualMouseSpeed(spd) => {
-                    self.mobile.controls.settings.virtual_mouse_sensitivity = spd.clamp(0.25, 3.00);
-                    let _ = self.mobile.controls.settings.save();
+                    let spd = spd.clamp(0.25, 3.00);
+                    if self.mobile.controls.settings.virtual_mouse_sensitivity != spd {
+                        self.mobile.controls.settings.virtual_mouse_sensitivity = spd;
+                        self.mobile.hub_save_pending = true;
+                    }
                 }
                 InGameMenuAction::StepVirtualMouseSpeed(dir) => {
                     self.mobile.controls.settings.virtual_mouse_sensitivity =
@@ -1433,13 +1453,18 @@ impl Game<'_> {
                     let _ = self.mobile.controls.settings.save();
                 }
                 InGameMenuAction::SetVirtualMousePointerSize(scale) => {
-                    self.mobile.controls.settings.virtual_mouse_pointer_scale =
-                        scale.clamp(0.5, 2.0);
-                    let _ = self.mobile.controls.settings.save();
+                    let scale = scale.clamp(0.5, 2.0);
+                    if self.mobile.controls.settings.virtual_mouse_pointer_scale != scale {
+                        self.mobile.controls.settings.virtual_mouse_pointer_scale = scale;
+                        self.mobile.hub_save_pending = true;
+                    }
                 }
                 InGameMenuAction::SetGyroSensitivity(val) => {
-                    self.mobile.controls.settings.gyro_sensitivity = val.clamp(0.10, 3.00);
-                    let _ = self.mobile.controls.settings.save();
+                    let val = val.clamp(0.10, 3.00);
+                    if self.mobile.controls.settings.gyro_sensitivity != val {
+                        self.mobile.controls.settings.gyro_sensitivity = val;
+                        self.mobile.hub_save_pending = true;
+                    }
                 }
                 InGameMenuAction::StepGyroSensitivity(dir) => {
                     self.mobile.controls.settings.gyro_sensitivity =
@@ -1448,8 +1473,11 @@ impl Game<'_> {
                     let _ = self.mobile.controls.settings.save();
                 }
                 InGameMenuAction::SetTouchSensitivity(sens) => {
-                    self.mobile.controls.settings.sensitivity = sens.clamp(0.10, 3.00);
-                    let _ = self.mobile.controls.settings.save();
+                    let sens = sens.clamp(0.10, 3.00);
+                    if self.mobile.controls.settings.sensitivity != sens {
+                        self.mobile.controls.settings.sensitivity = sens;
+                        self.mobile.hub_save_pending = true;
+                    }
                 }
                 InGameMenuAction::StepTouchSensitivity(dir) => {
                     self.mobile.controls.settings.sensitivity =
@@ -1458,8 +1486,11 @@ impl Game<'_> {
                     let _ = self.mobile.controls.settings.save();
                 }
                 InGameMenuAction::SetButtonScale(val) => {
-                    self.mobile.controls.settings.button_scale = val.clamp(0.50, 2.00);
-                    let _ = self.mobile.controls.settings.save();
+                    let val = val.clamp(0.50, 2.00);
+                    if self.mobile.controls.settings.button_scale != val {
+                        self.mobile.controls.settings.button_scale = val;
+                        self.mobile.hub_save_pending = true;
+                    }
                 }
                 InGameMenuAction::StepButtonScale(dir) => {
                     self.mobile.controls.settings.button_scale =
@@ -1518,8 +1549,8 @@ impl Game<'_> {
                         );
                     }
                     if changed {
-                        let _ = self.mobile.controls.settings.save();
-                        self.settings.save(&Self::options_path());
+                        self.mobile.hub_save_pending = true;
+                        self.mobile.hub_options_pending = true;
                     }
                 }
                 InGameMenuAction::SendCustomInput(token) => {
@@ -1531,6 +1562,9 @@ impl Game<'_> {
             // Keep that copy current before another option change applies it.
             self.mobile_sync_resolution_scale();
             self.settings.touch = self.mobile.controls.settings.clone();
+            if matches!(t.phase, TouchPhase::Ended | TouchPhase::Cancelled) {
+                self.mobile_hub_flush_saves();
+            }
             return Ok(true);
         }
         if t.phase == TouchPhase::Moved {

@@ -1664,6 +1664,13 @@ fn hub_metrics(w: f32, h: f32) -> (f32, f32, f32, f32, f32, f32, f32, f32, f32) 
     let body_h = (dh - 64.0).max(160.0);
     (dw, dh, dx, dy, side_w, cx, cw, body_top, body_h)
 }
+/// Slider position (0..=1) for a touch at `x`, on the track the hub draws
+/// (inset 14 px on each side of the card).
+fn hub_slider_t(x: f32, cx: f32, cw: f32) -> f32 {
+    let sl_x = cx + 14.0;
+    let sl_w = (cw - 28.0).max(40.0);
+    ((x - sl_x) / sl_w).clamp(0.0, 1.0)
+}
 
 impl TouchUi {
     fn step_animations(&self) -> (f32, f32) {
@@ -1869,13 +1876,11 @@ impl TouchUi {
             }
         }
 
-        // Handle ongoing sensitivity slider drag on Tab 0 (Recommended) or Tab 1 (Controls)
+        // Handle ongoing sensitivity slider drag on Tab 0 (Recommended)
         if self.sensitivity_dragging {
             match phase {
                 TouchPhase::Moved => {
-                    let sl_x = cx + 10.0;
-                    let sl_w = (cw - 20.0).max(40.0);
-                    let t = ((p[0] - sl_x) / sl_w).clamp(0.0, 1.0);
+                    let t = hub_slider_t(p[0], cx, cw);
                     let sens = (0.10 + t * 2.90).clamp(0.10, 3.00);
                     return Some(InGameMenuAction::SetTouchSensitivity(sens));
                 }
@@ -1887,7 +1892,7 @@ impl TouchUi {
             }
         }
 
-        // Handle ongoing virtual-mouse-speed slider drag on Tab 0 or Tab 2
+        // Handle ongoing virtual-mouse-speed slider drag on Tab 0 (Recommended)
         if self.mouse_speed_dragging {
             match phase {
                 TouchPhase::Moved => {
@@ -1904,7 +1909,7 @@ impl TouchUi {
             }
         }
 
-        // Handle ongoing pointer-size slider drag on Tab 1
+        // Handle ongoing pointer-size slider drag on Tab 0 (Recommended)
         if self.pointer_size_dragging {
             match phase {
                 TouchPhase::Moved => {
@@ -1921,7 +1926,7 @@ impl TouchUi {
             }
         }
 
-        // Handle ongoing gyroscope-sensitivity slider drag on Tab 2
+        // Handle ongoing gyroscope-sensitivity slider drag on Tab 2 (Aiming)
         if self.gyro_sensitivity_dragging {
             match phase {
                 TouchPhase::Moved => {
@@ -1938,7 +1943,7 @@ impl TouchUi {
             }
         }
 
-        // Handle ongoing global-button-scale slider drag on Tab 3
+        // Handle ongoing global-button-scale slider drag on Tab 3 (Buttons)
         if self.button_scale_dragging {
             match phase {
                 TouchPhase::Moved => {
@@ -2282,7 +2287,7 @@ impl TouchUi {
                 }
             }
 
-            // Check if touch started on sliders or quick chips in Tab 0 (Recommended)
+            // Check if touch started on a slider or quick chip in Tab 0 (Recommended)
             if self.hub_tab == 0 && inside(content_pane) {
                 let body_y = body_top - self.hub_scroll;
                 let res_card_y = body_y + 18.0;
@@ -2307,20 +2312,16 @@ impl TouchUi {
                 let sens_card_y = body_y + 118.0;
                 if inside([cx, sens_card_y, cw, 50.0]) {
                     self.sensitivity_dragging = true;
-                    let sl_x = cx + 10.0;
-                    let sl_w = (cw - 20.0).max(40.0);
-                    let t = ((p[0] - sl_x) / sl_w).clamp(0.0, 1.0);
+                    let t = hub_slider_t(p[0], cx, cw);
                     let sens = (0.10 + t * 2.90).clamp(0.10, 3.00);
                     self.slider_gesture =
                         Some((id, p, InGameMenuAction::SetTouchSensitivity(sens)));
                     return Some(InGameMenuAction::Close);
                 }
-                let spd_card_y = body_y + 284.0;
+                let spd_card_y = body_y + 230.0;
                 if inside([cx, spd_card_y, cw, 50.0]) {
                     self.mouse_speed_dragging = true;
-                    let sl_x = cx + 14.0;
-                    let sl_w = (cw - 28.0).max(40.0);
-                    let t = ((p[0] - sl_x) / sl_w).clamp(0.0, 1.0);
+                    let t = hub_slider_t(p[0], cx, cw);
                     self.slider_gesture = Some((
                         id,
                         p,
@@ -2328,47 +2329,10 @@ impl TouchUi {
                     ));
                     return Some(InGameMenuAction::Close);
                 }
-            }
-
-            // Check if touch started on the Sensitivity slider card in Tab 1 (Controls)
-            if self.hub_tab == 1 && inside(content_pane) {
-                let body_y = body_top - self.hub_scroll;
-                let sens_card_y = body_y + 148.0;
-                let track_r = [cx, sens_card_y, cw, 50.0];
-                if inside(track_r) {
-                    self.sensitivity_dragging = true;
-                    let sl_x = cx + 10.0;
-                    let sl_w = (cw - 20.0).max(40.0);
-                    let t = ((p[0] - sl_x) / sl_w).clamp(0.0, 1.0);
-                    let sens = (0.10 + t * 2.90).clamp(0.10, 3.00);
-                    self.slider_gesture =
-                        Some((id, p, InGameMenuAction::SetTouchSensitivity(sens)));
-                    return Some(InGameMenuAction::Close);
-                }
-            }
-
-            // Check if touch started on the Virtual Mouse Speed or Pointer Size slider tracks in Tab 2 (Aiming)
-            if self.hub_tab == 2 && inside(content_pane) {
-                let body_y = body_top - self.hub_scroll;
-                let spd_card_y = body_y + 180.0;
-                if inside([cx, spd_card_y, cw, 50.0]) {
-                    self.mouse_speed_dragging = true;
-                    let sl_x = cx + 14.0;
-                    let sl_w = (cw - 28.0).max(40.0);
-                    let t = ((p[0] - sl_x) / sl_w).clamp(0.0, 1.0);
-                    self.slider_gesture = Some((
-                        id,
-                        p,
-                        InGameMenuAction::SetVirtualMouseSpeed(0.25 + t * 2.75),
-                    ));
-                    return Some(InGameMenuAction::Close);
-                }
-                let size_card_y = body_y + 238.0;
+                let size_card_y = body_y + 288.0;
                 if inside([cx, size_card_y, cw, 50.0]) {
                     self.pointer_size_dragging = true;
-                    let sl_x = cx + 14.0;
-                    let sl_w = (cw - 28.0).max(40.0);
-                    let t = ((p[0] - sl_x) / sl_w).clamp(0.0, 1.0);
+                    let t = hub_slider_t(p[0], cx, cw);
                     self.slider_gesture = Some((
                         id,
                         p,
@@ -2376,12 +2340,15 @@ impl TouchUi {
                     ));
                     return Some(InGameMenuAction::Close);
                 }
-                let gyro_card_y = body_y + 350.0;
+            }
+
+            // Check if touch started on the Gyroscope Sensitivity slider in Tab 2 (Aiming)
+            if self.hub_tab == 2 && inside(content_pane) {
+                let body_y = body_top - self.hub_scroll;
+                let gyro_card_y = body_y + 18.0 + 54.0 * 6.0;
                 if inside([cx, gyro_card_y, cw, 50.0]) {
                     self.gyro_sensitivity_dragging = true;
-                    let sl_x = cx + 14.0;
-                    let sl_w = (cw - 28.0).max(40.0);
-                    let t = ((p[0] - sl_x) / sl_w).clamp(0.0, 1.0);
+                    let t = hub_slider_t(p[0], cx, cw);
                     self.slider_gesture =
                         Some((id, p, InGameMenuAction::SetGyroSensitivity(0.10 + t * 2.90)));
                     return Some(InGameMenuAction::Close);
@@ -2420,7 +2387,7 @@ impl TouchUi {
         let body_y = body_top - self.hub_scroll;
         match self.hub_tab {
             0 => {
-                // Tab 0: Recommended (Real-Time Resolution, Fast Sensitivity, Virtual Mouse, Quick Controls & Animations)
+                // Tab 0: Recommended (resolution, touch look and the virtual mouse)
                 let res_y = body_y + 18.0;
                 let chip_y = res_y + 48.0;
                 let chip_gap = 6.0;
@@ -2440,28 +2407,20 @@ impl TouchUi {
                 }
                 let sens_y = body_y + 118.0;
                 if inside([cx, sens_y, cw, 50.0]) {
-                    let sl_x = cx + 10.0;
-                    let sl_w = (cw - 20.0).max(40.0);
-                    let t = ((p[0] - sl_x) / sl_w).clamp(0.0, 1.0);
+                    let t = hub_slider_t(p[0], cx, cw);
                     let sens = (0.10 + t * 2.90).clamp(0.10, 3.00);
                     return Some(InGameMenuAction::SetTouchSensitivity(sens));
                 }
-                let vmouse_y = body_y + 176.0;
-                if inside([cx, vmouse_y, cw, 46.0]) {
+                if inside([cx, body_y + 176.0, cw, 46.0]) {
                     return Some(InGameMenuAction::ToggleVirtualMouse);
                 }
-                if inside([cx, body_y + 230., cw, 46.]) {
-                    return Some(InGameMenuAction::ToggleKeyboardButton);
-                }
-                let spd_y = body_y + 284.0;
-                if inside([cx, spd_y, cw, 50.0]) {
-                    let sl_x = cx + 14.0;
-                    let sl_w = (cw - 28.0).max(40.0);
-                    let t = ((p[0] - sl_x) / sl_w).clamp(0.0, 1.0);
+                if inside([cx, body_y + 230.0, cw, 50.0]) {
+                    let t = hub_slider_t(p[0], cx, cw);
                     return Some(InGameMenuAction::SetVirtualMouseSpeed(0.25 + t * 2.75));
                 }
-                if inside([cx, body_y + 342.0, cw, 46.0]) {
-                    return Some(InGameMenuAction::PresetVisibilityAll);
+                if inside([cx, body_y + 288.0, cw, 50.0]) {
+                    let t = hub_slider_t(p[0], cx, cw);
+                    return Some(InGameMenuAction::SetVirtualMousePointerSize(0.5 + t * 1.5));
                 }
             }
             1 => {
@@ -2486,99 +2445,61 @@ impl TouchUi {
                     self.presets_modal_open = true;
                     return Some(InGameMenuAction::Close);
                 }
-
-                // Sensitivity Slider card (y = body_y + 148.0, h = 50.0)
-                let sens_y = body_y + 148.0;
-                if inside([cx, sens_y, cw, 50.0]) {
-                    let sl_x = cx + 10.0;
-                    let sl_w = (cw - 20.0).max(40.0);
-                    let t = ((p[0] - sl_x) / sl_w).clamp(0.0, 1.0);
-                    let sens = (0.10 + t * 2.90).clamp(0.10, 3.00);
-                    return Some(InGameMenuAction::SetTouchSensitivity(sens));
-                }
-
-                // Authoritative Virtual Mouse Toggle (y = body_y + 206.0, h = 46.0)
-                let vmouse_y = body_y + 206.0;
-                if inside([cx, vmouse_y, cw, 46.0]) {
-                    return Some(InGameMenuAction::ToggleVirtualMouse);
-                }
-
-                if inside([cx, body_y + 314., cw, 46.]) {
-                    return Some(InGameMenuAction::ToggleAnalogMovement);
-                }
-                // Split Touch (Aim & Look) (y = body_y + 260.0, h = 46.0)
-                let spl_y = body_y + 260.0;
-                if inside([cx, spl_y, cw, 46.0]) {
-                    return Some(InGameMenuAction::ToggleSplitTouch);
+                if inside([cx, body_y + 136.0, cw, 46.0]) {
+                    return Some(InGameMenuAction::PresetVisibilityAll);
                 }
             }
             2 => {
-                if inside([cx, body_y + 408., cw, 46.]) {
-                    return Some(InGameMenuAction::ToggleInteractionLook);
-                }
-                // Tab 2: Aiming, Camera & Virtual Mouse
+                // Tab 2: Movement, aiming and gyroscope
                 let row_h = 46.0;
                 let step = 54.0;
-                let r0 = [cx, body_y + 18.0, cw, row_h]; // Movement & Aim Mode
-                let r1 = [cx, body_y + 18.0 + step, cw, row_h]; // Joystick Active Zone
-                let r2 = [cx, body_y + 18.0 + step * 2.0, cw, row_h]; // Virtual Mouse Toggle
-                let spd_card = [cx, body_y + 180.0, cw, 50.0]; // Virtual Mouse Speed slider
-                let size_card = [cx, body_y + 238.0, cw, 50.0]; // Pointer Size slider
-                let r4 = [cx, body_y + 296.0, cw, row_h]; // Gyroscope Aiming
-                let _r5 = [cx, body_y + 350.0, cw, row_h]; // Gyro Sensitivity
-                if inside(r0) {
+                let row = |i: f32| [cx, body_y + 18.0 + step * i, cw, row_h];
+                if inside(row(0.0)) {
                     return Some(InGameMenuAction::CycleMovementMode);
                 }
-                if inside(r1) {
+                if inside(row(1.0)) {
                     return Some(InGameMenuAction::CycleJoystickArea);
                 }
-                if inside(r2) {
-                    return Some(InGameMenuAction::ToggleVirtualMouse);
+                if inside(row(2.0)) {
+                    return Some(InGameMenuAction::ToggleAnalogMovement);
                 }
-                if inside(spd_card) {
-                    let sl_x = cx + 14.0;
-                    let sl_w = (cw - 28.0).max(40.0);
-                    let t = ((p[0] - sl_x) / sl_w).clamp(0.0, 1.0);
-                    return Some(InGameMenuAction::SetVirtualMouseSpeed(0.25 + t * 2.75));
+                if inside(row(3.0)) {
+                    return Some(InGameMenuAction::ToggleSplitTouch);
                 }
-                if inside(size_card) {
-                    let sl_x = cx + 14.0;
-                    let sl_w = (cw - 28.0).max(40.0);
-                    let t = ((p[0] - sl_x) / sl_w).clamp(0.0, 1.0);
-                    return Some(InGameMenuAction::SetVirtualMousePointerSize(0.5 + t * 1.5));
+                if inside(row(4.0)) {
+                    return Some(InGameMenuAction::ToggleInteractionLook);
                 }
-                if inside(r4) {
+                if inside(row(5.0)) {
                     return Some(InGameMenuAction::ToggleGyro);
                 }
-                if inside([cx, body_y + 350.0, cw, 50.0]) {
-                    let sl_x = cx + 14.0;
-                    let sl_w = (cw - 28.0).max(40.0);
-                    let t = ((p[0] - sl_x) / sl_w).clamp(0.0, 1.0);
+                if inside([cx, body_y + 18.0 + step * 6.0, cw, 50.0]) {
+                    let t = hub_slider_t(p[0], cx, cw);
                     return Some(InGameMenuAction::SetGyroSensitivity(0.10 + t * 2.90));
                 }
             }
             3 => {
-                if inside([cx, body_y + 180., cw, 46.]) {
-                    return Some(InGameMenuAction::ToggleOffhandButton);
-                }
-                if inside([cx, body_y + 234., cw, 46.]) {
-                    return Some(InGameMenuAction::ToggleShieldButton);
-                }
                 // Tab 3: Buttons & Layout Options
                 let row_h = 46.0;
                 let step = 54.0;
-                let scale_y = body_y + 18.0;
-                if inside([cx, scale_y, cw, 50.0]) {
-                    let sl_x = cx + 14.0;
-                    let sl_w = (cw - 28.0).max(40.0);
-                    let t = ((p[0] - sl_x) / sl_w).clamp(0.0, 1.0);
+                if inside([cx, body_y + 18.0, cw, 50.0]) {
+                    let t = hub_slider_t(p[0], cx, cw);
                     return Some(InGameMenuAction::SetButtonScale(0.50 + t * 1.50));
                 }
-                if inside([cx, body_y + 18.0 + step, cw, row_h]) {
+                let row = |i: f32| [cx, body_y + 18.0 + step * i, cw, row_h];
+                if inside(row(1.0)) {
                     return Some(InGameMenuAction::ToggleLeftHanded);
                 }
-                if inside([cx, body_y + 18.0 + step * 2.0, cw, row_h]) {
+                if inside(row(2.0)) {
                     return Some(InGameMenuAction::ToggleInventoryControls);
+                }
+                if inside(row(3.0)) {
+                    return Some(InGameMenuAction::ToggleOffhandButton);
+                }
+                if inside(row(4.0)) {
+                    return Some(InGameMenuAction::ToggleShieldButton);
+                }
+                if inside(row(5.0)) {
+                    return Some(InGameMenuAction::ToggleKeyboardButton);
                 }
             }
             _ => {
@@ -2834,10 +2755,10 @@ impl TouchUi {
         // Scrollable Right Content Panel with scissor clip and tab transition slide
         let tab_slide = (1.0 - tab_ease) * 14.0;
         let content_height = match self.hub_tab {
-            0 => 400.0,
-            1 => 376.0,
-            2 => 470.0,
-            3 => 296.0,
+            0 => 350.0,
+            1 => 196.0,
+            2 => 404.0,
+            3 => 346.0,
             _ => 120.0,
         };
         let max_scroll = (content_height - body_h).max(0.0);
@@ -2878,10 +2799,28 @@ impl TouchUi {
                 );
             }
         };
+        let draw_slider_card = |ui: &mut Ui<'_>, ry: f32, title: &str, value: &str, frac: f32| {
+            let pill = [cx + cw - 48.0 - 12.0, ry + 6.0, 48.0, 18.0];
+            ui.rounded(cx, ry, cw, 50.0, 11.0, card_bg);
+            ui.border(cx, ry, cw, 50.0, 11.0, border_c);
+            ui.text(Face::SemiBold, 10.8, cx + 14.0, ry + 6.0, text_c, title);
+            ui.rounded(pill[0], pill[1], pill[2], pill[3], 6.0, card_sel);
+            ui.border(pill[0], pill[1], pill[2], pill[3], 6.0, accent);
+            ui.centered_fit(Face::SemiBold, 9.4, pill, accent_hi, value);
+            let sl_x = cx + 14.0;
+            let sl_w = (cw - 28.0).max(40.0);
+            let sl_y = ry + 33.0;
+            let frac = frac.clamp(0.0, 1.0);
+            ui.rounded(sl_x, sl_y, sl_w, 6.0, 3.0, sidebar_bg);
+            ui.rounded(sl_x, sl_y, (sl_w * frac).max(6.0), 6.0, 3.0, accent);
+            let thumb_x = sl_x + sl_w * frac;
+            ui.rounded(thumb_x - 7.0, sl_y - 4.0, 14.0, 14.0, 7.0, accent_hi);
+            ui.border(thumb_x - 7.0, sl_y - 4.0, 14.0, 14.0, 7.0, text_c);
+        };
 
         match self.hub_tab {
             0 => {
-                // Tab 0: Recommended (Real-Time Resolution, Touch Sensitivity, Virtual Mouse, Quick Controls & Animations)
+                // Tab 0: Recommended (resolution, touch look and the virtual mouse)
                 ui.text(
                     Face::SemiBold,
                     10.2,
@@ -2962,61 +2901,21 @@ impl TouchUi {
                         &format!("{pct}%"),
                     );
                 }
-
                 ui.text(
                     Face::SemiBold,
                     10.2,
                     cx,
                     body_y + 102.0,
                     muted_c,
-                    "FAST AIM, VIRTUAL MOUSE & CONTROLS",
+                    "TOUCH LOOK & VIRTUAL MOUSE",
                 );
-                let sens_y = body_y + 118.0;
-                ui.rounded(cx, sens_y, cw, 50.0, 11.0, card_bg);
-                ui.border(cx, sens_y, cw, 50.0, 11.0, border_c);
-                ui.text(
-                    Face::SemiBold,
-                    10.8,
-                    cx + 14.0,
-                    sens_y + 6.0,
-                    text_c,
+                draw_slider_card(
+                    &mut ui,
+                    body_y + 118.0,
                     "Touch Look Sensitivity",
+                    &format!("{:.0}%", settings.sensitivity * 100.0),
+                    (settings.sensitivity - 0.10) / 2.90,
                 );
-                let pct_txt = format!("{:.0}%", settings.sensitivity * 100.0);
-                let pill_w = 48.0;
-                ui.rounded(
-                    cx + cw - pill_w - 12.0,
-                    sens_y + 6.0,
-                    pill_w,
-                    18.0,
-                    6.0,
-                    card_sel,
-                );
-                ui.border(
-                    cx + cw - pill_w - 12.0,
-                    sens_y + 6.0,
-                    pill_w,
-                    18.0,
-                    6.0,
-                    accent,
-                );
-                ui.centered_fit(
-                    Face::SemiBold,
-                    9.4,
-                    [cx + cw - pill_w - 12.0, sens_y + 6.0, pill_w, 18.0],
-                    accent_hi,
-                    &pct_txt,
-                );
-                let sl_x = cx + 14.0;
-                let sl_w = (cw - 28.0).max(40.0);
-                let sl_y = sens_y + 33.0;
-                let frac = ((settings.sensitivity - 0.10) / 2.90).clamp(0.0, 1.0);
-                ui.rounded(sl_x, sl_y, sl_w, 6.0, 3.0, sidebar_bg);
-                ui.rounded(sl_x, sl_y, (sl_w * frac).max(6.0), 6.0, 3.0, accent);
-                let thumb_x = sl_x + sl_w * frac;
-                ui.rounded(thumb_x - 7.0, sl_y - 4.0, 14.0, 14.0, 7.0, accent_hi);
-                ui.border(thumb_x - 7.0, sl_y - 4.0, 14.0, 14.0, 7.0, text_c);
-
                 draw_toggle_row(
                     &mut ui,
                     body_y + 176.0,
@@ -3025,72 +2924,19 @@ impl TouchUi {
                     Some(settings.virtual_mouse_enabled),
                     None,
                 );
-
-                draw_toggle_row(
+                draw_slider_card(
                     &mut ui,
-                    body_y + 230.,
-                    "Keyboard Button",
-                    "Show Keys beside Back; fields still open the keyboard automatically",
-                    Some(settings.keyboard_button),
-                    None,
-                );
-                let spd_y = body_y + 284.0;
-                ui.rounded(cx, spd_y, cw, 50.0, 11.0, card_bg);
-                ui.border(cx, spd_y, cw, 50.0, 11.0, border_c);
-                ui.text(
-                    Face::SemiBold,
-                    10.8,
-                    cx + 14.0,
-                    spd_y + 6.0,
-                    text_c,
+                    body_y + 230.0,
                     "Virtual Mouse Speed",
+                    &format!("{:.0}%", settings.virtual_mouse_sensitivity * 100.0),
+                    (settings.virtual_mouse_sensitivity - 0.25) / 2.75,
                 );
-                let spd_pct = format!("{:.0}%", settings.virtual_mouse_sensitivity * 100.0);
-                ui.rounded(
-                    cx + cw - pill_w - 12.0,
-                    spd_y + 6.0,
-                    pill_w,
-                    18.0,
-                    6.0,
-                    card_sel,
-                );
-                ui.border(
-                    cx + cw - pill_w - 12.0,
-                    spd_y + 6.0,
-                    pill_w,
-                    18.0,
-                    6.0,
-                    accent,
-                );
-                ui.centered_fit(
-                    Face::SemiBold,
-                    9.4,
-                    [cx + cw - pill_w - 12.0, spd_y + 6.0, pill_w, 18.0],
-                    accent_hi,
-                    &spd_pct,
-                );
-                let spd_sl_y = spd_y + 33.0;
-                let spd_frac = ((settings.virtual_mouse_sensitivity - 0.25) / 2.75).clamp(0.0, 1.0);
-                ui.rounded(sl_x, spd_sl_y, sl_w, 6.0, 3.0, sidebar_bg);
-                ui.rounded(sl_x, spd_sl_y, (sl_w * spd_frac).max(6.0), 6.0, 3.0, accent);
-                let spd_thumb_x = sl_x + sl_w * spd_frac;
-                ui.rounded(
-                    spd_thumb_x - 7.0,
-                    spd_sl_y - 4.0,
-                    14.0,
-                    14.0,
-                    7.0,
-                    accent_hi,
-                );
-                ui.border(spd_thumb_x - 7.0, spd_sl_y - 4.0, 14.0, 14.0, 7.0, text_c);
-
-                draw_toggle_row(
+                draw_slider_card(
                     &mut ui,
-                    body_y + 342.0,
-                    "Apply Standard Menu Visibility",
-                    "Reset in-game vs in-menu visibility flags for active system",
-                    None,
-                    None,
+                    body_y + 288.0,
+                    "Pointer Size",
+                    &format!("{:.0}%", settings.virtual_mouse_pointer_scale * 100.0),
+                    (settings.virtual_mouse_pointer_scale - 0.5) / 1.5,
                 );
             }
             1 => {
@@ -3184,105 +3030,24 @@ impl TouchUi {
                         "›",
                     );
                 }
-
-                // 3. Sensitivity Slider Card
-                ui.text(
-                    Face::SemiBold,
-                    10.2,
-                    cx,
-                    body_y + 132.0,
-                    muted_c,
-                    "POINTER, CAMERA & AIM",
-                );
-                let sens_y = body_y + 148.0;
-                ui.rounded(cx, sens_y, cw, 50.0, 11.0, card_bg);
-                ui.border(cx, sens_y, cw, 50.0, 11.0, border_c);
-                ui.text(
-                    Face::SemiBold,
-                    10.8,
-                    cx + 14.0,
-                    sens_y + 6.0,
-                    text_c,
-                    "Touch Look Sensitivity",
-                );
-                let pct_txt = format!("{:.0}%", settings.sensitivity * 100.0);
-                let pill_w = 48.0;
-                ui.rounded(
-                    cx + cw - pill_w - 12.0,
-                    sens_y + 6.0,
-                    pill_w,
-                    18.0,
-                    6.0,
-                    card_sel,
-                );
-                ui.border(
-                    cx + cw - pill_w - 12.0,
-                    sens_y + 6.0,
-                    pill_w,
-                    18.0,
-                    6.0,
-                    accent,
-                );
-                ui.centered_fit(
-                    Face::SemiBold,
-                    9.4,
-                    [cx + cw - pill_w - 12.0, sens_y + 6.0, pill_w, 18.0],
-                    accent_hi,
-                    &pct_txt,
-                );
-                let sl_x = cx + 14.0;
-                let sl_w = (cw - 28.0).max(40.0);
-                let sl_y = sens_y + 33.0;
-                let frac = ((settings.sensitivity - 0.10) / 2.90).clamp(0.0, 1.0);
-                ui.rounded(sl_x, sl_y, sl_w, 6.0, 3.0, sidebar_bg);
-                ui.rounded(sl_x, sl_y, (sl_w * frac).max(6.0), 6.0, 3.0, accent);
-                let thumb_x = sl_x + sl_w * frac;
-                ui.rounded(thumb_x - 7.0, sl_y - 4.0, 14.0, 14.0, 7.0, accent_hi);
-                ui.border(thumb_x - 7.0, sl_y - 4.0, 14.0, 14.0, 7.0, text_c);
-
-                // 4. Authoritative Virtual Mouse Toggle, Invert Y-Axis & Split Touch
                 draw_toggle_row(
                     &mut ui,
-                    body_y + 206.0,
-                    "Virtual Mouse Button",
-                    "Windows 11 pointer; auto-shows when MCPE controls are hidden",
-                    Some(settings.virtual_mouse_enabled),
+                    body_y + 136.0,
+                    "Apply Standard Menu Visibility",
+                    "Reset in-game vs in-menu visibility flags for active system",
                     None,
-                );
-                draw_toggle_row(
-                    &mut ui,
-                    body_y + 260.0,
-                    "Split Touch (Aim & Look)",
-                    "Use center crosshair instead of tap-anywhere interaction",
-                    Some(settings.crosshair()),
-                    None,
-                );
-                draw_toggle_row(
-                    &mut ui,
-                    body_y + 314.,
-                    &crate::lang::get("starling.controls.analog"),
-                    &crate::lang::get("starling.controls.analog_hint"),
-                    Some(settings.analog_movement),
                     None,
                 );
             }
             2 => {
-                draw_toggle_row(
-                    &mut ui,
-                    body_y + 408.,
-                    &crate::lang::get("starling.controls.interact_look"),
-                    &crate::lang::get("starling.controls.interact_look_hint"),
-                    Some(settings.attack_button_look),
-                    None,
-                );
-                // Tab 2: Aiming, Camera & Virtual Mouse
+                // Tab 2: Movement, aiming and gyroscope
                 ui.text(
                     Face::SemiBold,
                     10.2,
                     cx,
                     body_y,
                     muted_c,
-                    "AIMING, VIRTUAL MOUSE & GYROSCOPE",
+                    "MOVEMENT, AIMING & GYROSCOPE",
                 );
                 let move_lbl = match settings.mode {
                     crate::android_controls::Mode::Dpad => "D-Pad + Crosshair/Touch",
@@ -3290,10 +3055,6 @@ impl TouchUi {
                     crate::android_controls::Mode::Tap => "Joystick + Tap to Interact",
                 };
                 let area_lbl = settings.joystick_style.move_area.label();
-                let gyro_spd_lbl = format!(
-                    "Tilt Multiplier ({:.0}%) — Tap left (−) or right (+)",
-                    settings.gyro_sensitivity * 100.0
-                );
                 let step = 54.0;
                 draw_toggle_row(
                     &mut ui,
@@ -3314,231 +3075,44 @@ impl TouchUi {
                 draw_toggle_row(
                     &mut ui,
                     body_y + 18.0 + step * 2.0,
-                    "Virtual Mouse Button",
-                    "Authoritative toggle for MCPE and GoyControl menus",
-                    Some(settings.virtual_mouse_enabled),
+                    &crate::lang::get("starling.controls.analog"),
+                    &crate::lang::get("starling.controls.analog_hint"),
+                    Some(settings.analog_movement),
                     None,
                 );
-
-                // Virtual Mouse Speed slider card (smooth SetVirtualMouseSpeed slider replacing InGameMenuAction::StepVirtualMouseSpeed +/- buttons)
-                let spd_y = body_y + 180.0;
-                ui.rounded(cx, spd_y, cw, 50.0, 11.0, card_bg);
-                ui.border(cx, spd_y, cw, 50.0, 11.0, border_c);
-                ui.text(
-                    Face::SemiBold,
-                    10.8,
-                    cx + 14.0,
-                    spd_y + 6.0,
-                    text_c,
-                    "Virtual Mouse Speed",
-                );
-                let spd_pct = format!("{:.0}%", settings.virtual_mouse_sensitivity * 100.0);
-                let spd_pill_w = 48.0;
-                ui.rounded(
-                    cx + cw - spd_pill_w - 12.0,
-                    spd_y + 6.0,
-                    spd_pill_w,
-                    18.0,
-                    6.0,
-                    card_sel,
-                );
-                ui.border(
-                    cx + cw - spd_pill_w - 12.0,
-                    spd_y + 6.0,
-                    spd_pill_w,
-                    18.0,
-                    6.0,
-                    accent,
-                );
-                ui.centered_fit(
-                    Face::SemiBold,
-                    9.4,
-                    [cx + cw - spd_pill_w - 12.0, spd_y + 6.0, spd_pill_w, 18.0],
-                    accent_hi,
-                    &spd_pct,
-                );
-                let spd_sl_x = cx + 14.0;
-                let spd_sl_w = (cw - 28.0).max(40.0);
-                let spd_sl_y = spd_y + 33.0;
-                let spd_frac = ((settings.virtual_mouse_sensitivity - 0.25) / 2.75).clamp(0.0, 1.0);
-                ui.rounded(spd_sl_x, spd_sl_y, spd_sl_w, 6.0, 3.0, sidebar_bg);
-                ui.rounded(
-                    spd_sl_x,
-                    spd_sl_y,
-                    (spd_sl_w * spd_frac).max(6.0),
-                    6.0,
-                    3.0,
-                    accent,
-                );
-                let spd_thumb_x = spd_sl_x + spd_sl_w * spd_frac;
-                ui.rounded(
-                    spd_thumb_x - 7.0,
-                    spd_sl_y - 4.0,
-                    14.0,
-                    14.0,
-                    7.0,
-                    accent_hi,
-                );
-                ui.border(spd_thumb_x - 7.0, spd_sl_y - 4.0, 14.0, 14.0, 7.0, text_c);
-
-                // Pointer Size slider card
-                let size_y = body_y + 238.0;
-                ui.rounded(cx, size_y, cw, 50.0, 11.0, card_bg);
-                ui.border(cx, size_y, cw, 50.0, 11.0, border_c);
-                ui.text(
-                    Face::SemiBold,
-                    10.8,
-                    cx + 14.0,
-                    size_y + 6.0,
-                    text_c,
-                    "Pointer Size",
-                );
-                let size_pct = format!("{:.0}%", settings.virtual_mouse_pointer_scale * 100.0);
-                let size_pill_w = 48.0;
-                ui.rounded(
-                    cx + cw - size_pill_w - 12.0,
-                    size_y + 6.0,
-                    size_pill_w,
-                    18.0,
-                    6.0,
-                    card_sel,
-                );
-                ui.border(
-                    cx + cw - size_pill_w - 12.0,
-                    size_y + 6.0,
-                    size_pill_w,
-                    18.0,
-                    6.0,
-                    accent,
-                );
-                ui.centered_fit(
-                    Face::SemiBold,
-                    9.4,
-                    [
-                        cx + cw - size_pill_w - 12.0,
-                        size_y + 6.0,
-                        size_pill_w,
-                        18.0,
-                    ],
-                    accent_hi,
-                    &size_pct,
-                );
-                let size_sl_x = cx + 14.0;
-                let size_sl_w = (cw - 28.0).max(40.0);
-                let size_sl_y = size_y + 33.0;
-                let size_frac =
-                    ((settings.virtual_mouse_pointer_scale - 0.5) / 1.5).clamp(0.0, 1.0);
-                ui.rounded(size_sl_x, size_sl_y, size_sl_w, 6.0, 3.0, sidebar_bg);
-                ui.rounded(
-                    size_sl_x,
-                    size_sl_y,
-                    (size_sl_w * size_frac).max(6.0),
-                    6.0,
-                    3.0,
-                    accent,
-                );
-                let size_thumb_x = size_sl_x + size_sl_w * size_frac;
-                ui.rounded(
-                    size_thumb_x - 7.0,
-                    size_sl_y - 4.0,
-                    14.0,
-                    14.0,
-                    7.0,
-                    accent_hi,
-                );
-                ui.border(size_thumb_x - 7.0, size_sl_y - 4.0, 14.0, 14.0, 7.0, text_c);
-
                 draw_toggle_row(
                     &mut ui,
-                    body_y + 296.0,
+                    body_y + 18.0 + step * 3.0,
+                    "Split Touch (Aim & Look)",
+                    "Use center crosshair instead of tap-anywhere interaction",
+                    Some(settings.crosshair()),
+                    None,
+                );
+                draw_toggle_row(
+                    &mut ui,
+                    body_y + 18.0 + step * 4.0,
+                    &crate::lang::get("starling.controls.interact_look"),
+                    &crate::lang::get("starling.controls.interact_look_hint"),
+                    Some(settings.attack_button_look),
+                    None,
+                );
+                draw_toggle_row(
+                    &mut ui,
+                    body_y + 18.0 + step * 5.0,
                     "Gyroscope Aiming",
                     "Tilt device for fine camera and bow aiming",
                     Some(settings.gyroscope),
                     None,
                 );
-                let _ = gyro_spd_lbl;
-                let gyro_y = body_y + 350.0;
-                ui.rounded(cx, gyro_y, cw, 50.0, 11.0, card_bg);
-                ui.border(cx, gyro_y, cw, 50.0, 11.0, border_c);
-                ui.text(
-                    Face::SemiBold,
-                    10.8,
-                    cx + 14.0,
-                    gyro_y + 6.0,
-                    text_c,
+                draw_slider_card(
+                    &mut ui,
+                    body_y + 18.0 + step * 6.0,
                     "Gyroscope Sensitivity",
+                    &format!("{:.0}%", settings.gyro_sensitivity * 100.0),
+                    (settings.gyro_sensitivity - 0.10) / 2.90,
                 );
-                let gyro_pct = format!("{:.0}%", settings.gyro_sensitivity * 100.0);
-                let gyro_pill_w = 48.0;
-                ui.rounded(
-                    cx + cw - gyro_pill_w - 12.0,
-                    gyro_y + 6.0,
-                    gyro_pill_w,
-                    18.0,
-                    6.0,
-                    card_sel,
-                );
-                ui.border(
-                    cx + cw - gyro_pill_w - 12.0,
-                    gyro_y + 6.0,
-                    gyro_pill_w,
-                    18.0,
-                    6.0,
-                    accent,
-                );
-                ui.centered_fit(
-                    Face::SemiBold,
-                    9.4,
-                    [
-                        cx + cw - gyro_pill_w - 12.0,
-                        gyro_y + 6.0,
-                        gyro_pill_w,
-                        18.0,
-                    ],
-                    accent_hi,
-                    &gyro_pct,
-                );
-                let gyro_sl_x = cx + 14.0;
-                let gyro_sl_w = (cw - 28.0).max(40.0);
-                let gyro_sl_y = gyro_y + 33.0;
-                let gyro_frac = ((settings.gyro_sensitivity - 0.10) / 2.90).clamp(0.0, 1.0);
-                ui.rounded(gyro_sl_x, gyro_sl_y, gyro_sl_w, 6.0, 3.0, sidebar_bg);
-                ui.rounded(
-                    gyro_sl_x,
-                    gyro_sl_y,
-                    (gyro_sl_w * gyro_frac).max(6.0),
-                    6.0,
-                    3.0,
-                    accent,
-                );
-                let gyro_thumb_x = gyro_sl_x + gyro_sl_w * gyro_frac;
-                ui.rounded(
-                    gyro_thumb_x - 7.0,
-                    gyro_sl_y - 4.0,
-                    14.0,
-                    14.0,
-                    7.0,
-                    accent_hi,
-                );
-                ui.border(gyro_thumb_x - 7.0, gyro_sl_y - 4.0, 14.0, 14.0, 7.0, text_c);
             }
             3 => {
-                draw_toggle_row(
-                    &mut ui,
-                    body_y + 180.,
-                    "Offhand Button",
-                    "Show the swap-hands button",
-                    Some(settings.offhand_button),
-                    None,
-                );
-                draw_toggle_row(
-                    &mut ui,
-                    body_y + 234.,
-                    "Separate Shield Button",
-                    "Off uses crouching to raise the shield",
-                    Some(settings.shield_button),
-                    None,
-                );
                 // Tab 3: Buttons & Layout Options
                 ui.text(
                     Face::SemiBold,
@@ -3549,58 +3123,13 @@ impl TouchUi {
                     "BUTTON SIZING, HANDEDNESS & BEHAVIOR",
                 );
                 let step = 54.0;
-                let scale_y = body_y + 18.0;
-                ui.rounded(cx, scale_y, cw, 50.0, 11.0, card_bg);
-                ui.border(cx, scale_y, cw, 50.0, 11.0, border_c);
-                ui.text(
-                    Face::SemiBold,
-                    10.8,
-                    cx + 14.0,
-                    scale_y + 6.0,
-                    text_c,
+                draw_slider_card(
+                    &mut ui,
+                    body_y + 18.0,
                     "Global Button Scale",
+                    &format!("{:.0}%", settings.button_scale * 100.0),
+                    (settings.button_scale - 0.50) / 1.50,
                 );
-                let sc_pct = format!("{:.0}%", settings.button_scale * 100.0);
-                let sc_pill_w = 48.0;
-                ui.rounded(
-                    cx + cw - sc_pill_w - 12.0,
-                    scale_y + 6.0,
-                    sc_pill_w,
-                    18.0,
-                    6.0,
-                    card_sel,
-                );
-                ui.border(
-                    cx + cw - sc_pill_w - 12.0,
-                    scale_y + 6.0,
-                    sc_pill_w,
-                    18.0,
-                    6.0,
-                    accent,
-                );
-                ui.centered_fit(
-                    Face::SemiBold,
-                    9.4,
-                    [cx + cw - sc_pill_w - 12.0, scale_y + 6.0, sc_pill_w, 18.0],
-                    accent_hi,
-                    &sc_pct,
-                );
-                let sc_sl_x = cx + 14.0;
-                let sc_sl_w = (cw - 28.0).max(40.0);
-                let sc_sl_y = scale_y + 33.0;
-                let sc_frac = ((settings.button_scale - 0.50) / 1.50).clamp(0.0, 1.0);
-                ui.rounded(sc_sl_x, sc_sl_y, sc_sl_w, 6.0, 3.0, sidebar_bg);
-                ui.rounded(
-                    sc_sl_x,
-                    sc_sl_y,
-                    (sc_sl_w * sc_frac).max(6.0),
-                    6.0,
-                    3.0,
-                    accent,
-                );
-                let sc_thumb_x = sc_sl_x + sc_sl_w * sc_frac;
-                ui.rounded(sc_thumb_x - 7.0, sc_sl_y - 4.0, 14.0, 14.0, 7.0, accent_hi);
-                ui.border(sc_thumb_x - 7.0, sc_sl_y - 4.0, 14.0, 14.0, 7.0, text_c);
                 draw_toggle_row(
                     &mut ui,
                     body_y + 18.0 + step,
@@ -3615,6 +3144,30 @@ impl TouchUi {
                     "Inventory Walk Controls",
                     "Keep movement controls active while inventory is open",
                     Some(settings.inventory_controls),
+                    None,
+                );
+                draw_toggle_row(
+                    &mut ui,
+                    body_y + 18.0 + step * 3.0,
+                    "Offhand Button",
+                    "Show the swap-hands button",
+                    Some(settings.offhand_button),
+                    None,
+                );
+                draw_toggle_row(
+                    &mut ui,
+                    body_y + 18.0 + step * 4.0,
+                    "Separate Shield Button",
+                    "Off uses crouching to raise the shield",
+                    Some(settings.shield_button),
+                    None,
+                );
+                draw_toggle_row(
+                    &mut ui,
+                    body_y + 18.0 + step * 5.0,
+                    "Keyboard Button",
+                    "Show Keys beside Back; fields still open the keyboard automatically",
+                    Some(settings.keyboard_button),
                     None,
                 );
             }
@@ -7948,11 +7501,12 @@ mod tests {
         let mut settings = crate::android_controls::Settings::default();
         let mut ui = TouchUi {
             floating_menu: true,
-            hub_tab: 2,
+            hub_tab: 0,
             ..Default::default()
         };
         ui.hub_max_scroll.set(300.);
-        let start = point(cx + cw / 2., top + 200.);
+        // Virtual Mouse Speed card on the Recommended tab (y = 230..280).
+        let start = point(cx + cw / 2., top + 250.);
         assert_eq!(
             ui.floating_menu_touch(
                 &mut batch,
@@ -7970,7 +7524,7 @@ mod tests {
                 &atlas,
                 1,
                 TouchPhase::Moved,
-                point(cx + cw / 2., top + 160.),
+                point(cx + cw / 2., top + 210.),
                 &mut settings
             ),
             Some(InGameMenuAction::Close)
@@ -7982,7 +7536,7 @@ mod tests {
                 &atlas,
                 1,
                 TouchPhase::Ended,
-                point(cx + cw / 2., top + 160.),
+                point(cx + cw / 2., top + 210.),
                 &mut settings
             ),
             Some(InGameMenuAction::Close)
@@ -7999,7 +7553,7 @@ mod tests {
             &mut settings,
         );
         assert!(
-            matches!(ui.floating_menu_touch(&mut batch,&atlas,2,TouchPhase::Moved,point(cx+cw-20.,top+200.),&mut settings),Some(InGameMenuAction::SetVirtualMouseSpeed(v)) if v>2.)
+            matches!(ui.floating_menu_touch(&mut batch,&atlas,2,TouchPhase::Moved,point(cx+cw-20.,top+250.),&mut settings),Some(InGameMenuAction::SetVirtualMouseSpeed(v)) if v>2.)
         );
         ui.floating_menu_touch(
             &mut batch,

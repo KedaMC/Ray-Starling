@@ -20,7 +20,7 @@ The compact Controls page keeps Starling's Bedrock Inventory option. On the
 main title screen, H and `…` sit below the existing account button; in game they
 keep their original positions. Back retains its original menu behavior.
 
-**360-degree movement** is available in H → Controls and is off by default.
+**360-degree movement** is available in H → Aiming and is off by default.
 With it off, touch movement uses Java directional sectors. **Look while
 interacting** applies to both attacking and use/place gestures. Vertical swipes
 starting on hub sliders scroll the pane; horizontal drags adjust their values.
