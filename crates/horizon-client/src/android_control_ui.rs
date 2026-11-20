@@ -76,7 +76,7 @@ pub struct TouchUi {
     relative: Option<RelativeTouch>,
     relative_click: Option<bool>,
     pub keyboard: Option<Keyboard>,
-    gesture: Option<(u64, [f32; 2], [f32; 2], bool)>,
+    gesture: Option<(u64, [f32; 2], [f32; 2], bool, MenuGesture)>,
     pointer_drag: Option<u64>,
     held_keys: BTreeMap<u64, KeyCode>,
     pub f3_latched: bool,
@@ -332,6 +332,16 @@ pub enum Gesture {
     None,
     Tap,
     Scroll(f32),
+    DragStart,
+    Drag,
+    DragEnd,
+}
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+enum MenuGesture {
+    #[default]
+    Undecided,
+    Scroll,
+    SliderDrag,
 }
 pub enum Action {
     LatchF3,
@@ -778,17 +788,10 @@ impl TouchUi {
         }
         None
     }
-    /// Sliders retain mouse dragging; list rows use scroll-or-tap gestures.
-    pub fn direct_pointer(&mut self, id: u64, p: [f32; 2], phase: TouchPhase, track: bool) -> bool {
-        if phase == TouchPhase::Started
-            && (track
-                || crate::widgets::last_targets().iter().any(|t| {
-                    let [x, y, w, h] = t.rect;
-                    matches!(t.kind, crate::widgets::Kind::Slider { .. })
-                        && (x..x + w).contains(&p[0])
-                        && (y..y + h).contains(&p[1])
-                }))
-        {
+    /// Scrollbars retain direct dragging. Sliders wait for gesture direction:
+    /// vertical movement scrolls the list; clearly horizontal movement drags the slider.
+    pub fn direct_pointer(&mut self, id: u64, _p: [f32; 2], phase: TouchPhase, track: bool) -> bool {
+        if phase == TouchPhase::Started && track {
             self.pointer_drag = Some(id);
         }
         if self.pointer_drag == Some(id) {
@@ -799,36 +802,65 @@ impl TouchUi {
         }
         false
     }
-    /// A drag scrolls; a tap clicks only on release. Never activate a row while scrolling it.
+    /// A tap clicks on release. Other gestures are classified after the finger moves far enough.
+    /// A slider requires a clearly horizontal gesture before it can start dragging, so an initial
+    /// vertical swipe cannot change its value.
     pub fn gesture(&mut self, id: u64, p: [f32; 2], phase: TouchPhase) -> Gesture {
         if phase == TouchPhase::Cancelled {
+            let release_slider = self.gesture.as_ref().is_some_and(
+                |(owner, _, _, _, mode)| *owner == id && *mode == MenuGesture::SliderDrag,
+            );
             self.cancel();
-            return Gesture::None;
+            return if release_slider {
+                Gesture::DragEnd
+            } else {
+                Gesture::None
+            };
         }
         if phase == TouchPhase::Started {
             if self.gesture.is_none() {
-                self.gesture = Some((id, p, p, false));
+                let slider = crate::widgets::last_targets().iter().any(|target| {
+                    let [x, y, w, h] = target.rect;
+                    matches!(target.kind, crate::widgets::Kind::Slider { .. })
+                        && (x..x + w).contains(&p[0])
+                        && (y..y + h).contains(&p[1])
+                });
+                self.gesture = Some((id, p, p, slider, MenuGesture::Undecided));
             }
             return Gesture::None;
         }
-        let Some((owner, start, previous, dragged)) = &mut self.gesture else {
+        let Some((owner, start, previous, slider, mode)) = &mut self.gesture else {
             return Gesture::None;
         };
         if *owner != id {
             return Gesture::None;
         }
-        *dragged |= (p[0] - start[0]).hypot(p[1] - start[1]) > 12.0;
-        let dy = p[1] - previous[1];
+        let (dx, dy) = (p[0] - start[0], p[1] - start[1]);
+        let delta_y = p[1] - previous[1];
         *previous = p;
-        if phase == TouchPhase::Ended {
-            let tap = !*dragged;
-            self.cancel();
-            return if tap { Gesture::Tap } else { Gesture::None };
+        let was_undecided = *mode == MenuGesture::Undecided;
+        if was_undecided && dx.hypot(dy) > 12.0 {
+            if !*slider || dy.abs() >= dx.abs() {
+                *mode = MenuGesture::Scroll;
+            } else if dx.abs() > 20.0 && dx.abs() > dy.abs() * 1.5 {
+                *mode = MenuGesture::SliderDrag;
+            }
         }
-        if *dragged {
-            Gesture::Scroll(dy / 30.0)
-        } else {
-            Gesture::None
+        if phase == TouchPhase::Ended {
+            let moved = dx.hypot(dy) > 12.0;
+            let result = match *mode {
+                MenuGesture::Undecided if !moved => Gesture::Tap,
+                MenuGesture::SliderDrag => Gesture::DragEnd,
+                MenuGesture::Undecided | MenuGesture::Scroll => Gesture::None,
+            };
+            self.cancel();
+            return result;
+        }
+        match *mode {
+            MenuGesture::Scroll => Gesture::Scroll(delta_y / 30.0),
+            MenuGesture::SliderDrag if was_undecided => Gesture::DragStart,
+            MenuGesture::SliderDrag => Gesture::Drag,
+            MenuGesture::Undecided => Gesture::None,
         }
     }
     pub fn action(&self, w: f32, h: f32, p: [f32; 2], menu: bool) -> Option<Action> {
@@ -8428,6 +8460,39 @@ mod tests {
         assert!(matches!(
             u.gesture(1, [20.0, 140.0], TouchPhase::Ended),
             Gesture::None
+        ));
+    }
+
+    #[test]
+    fn slider_touch_scrolls_vertically_and_only_drags_horizontally() {
+        crate::widgets::target_as(
+            [90.0, 90.0, 40.0, 20.0],
+            crate::widgets::Kind::Slider { value: 0.5, track: [94.0, 32.0] },
+        );
+        crate::widgets::end_frame(1);
+        let mut u = TouchUi::default();
+        assert!(!u.direct_pointer(1, [100.0, 100.0], TouchPhase::Started, false));
+        assert!(matches!(u.gesture(1, [100.0, 100.0], TouchPhase::Started), Gesture::None));
+        assert!(matches!(
+            u.gesture(1, [102.0, 80.0], TouchPhase::Moved),
+            Gesture::Scroll(_)
+        ));
+        assert!(matches!(
+            u.gesture(1, [102.0, 80.0], TouchPhase::Ended),
+            Gesture::None
+        ));
+        assert!(matches!(u.gesture(2, [100.0, 100.0], TouchPhase::Started), Gesture::None));
+        assert!(matches!(
+            u.gesture(2, [130.0, 102.0], TouchPhase::Moved),
+            Gesture::DragStart
+        ));
+        assert!(matches!(
+            u.gesture(2, [145.0, 103.0], TouchPhase::Moved),
+            Gesture::Drag
+        ));
+        assert!(matches!(
+            u.gesture(2, [145.0, 103.0], TouchPhase::Ended),
+            Gesture::DragEnd
         ));
     }
     #[test]

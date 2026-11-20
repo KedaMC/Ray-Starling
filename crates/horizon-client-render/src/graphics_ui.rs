@@ -2015,40 +2015,15 @@ impl GraphicsUi {
         self.scroll.release();
         self.dragging.take().is_some()
     }
-    /// The mouse wheel at the cursor. It scrolls the list, except that a hovered value
-    /// stepped by `<` `>` takes the step (`CycleButton.mouseScrolled`: up goes back)
-    /// while the "Scroll wheel changes settings" extra is on. A slider, a tick box and a
-    /// focused row don't take it, wherever the focus came from: the keyboard and a
-    /// controller step them with Left and Right.
+    /// The mouse wheel only scrolls the settings list; controls are changed by deliberate input.
     pub fn wheel(
         &mut self,
         s: &mut Settings,
         (w, h): (f32, f32),
-        (x, y): (f32, f32),
-        framebuffer: [i32; 2],
+        _cursor: (f32, f32),
+        _framebuffer: [i32; 2],
         amount: f32,
     ) -> Vec<Action> {
-        if amount != 0.0 && s.extras.wheel_cycles_settings {
-            let (cols, lines, _) = self.layout(s, w, h);
-            let hovered = (y >= cols.top && y < cols.bottom)
-                .then(|| {
-                    lines.iter().find_map(|line| {
-                        let setting = line.setting?;
-                        let ry = self.row_y(&cols, line);
-                        ui::hovered((x, y), cols.list_x, ry, cols.list_w, style::ROW)
-                            .then_some(setting.item)
-                    })
-                })
-                .flatten();
-            if let Some(item) = hovered
-                && item.steps(s)
-                && item.blocked(s).is_none()
-            {
-                item.cycle(s, amount > 0.0, framebuffer);
-                self.changed = true;
-                return vec![Action::ButtonClick, Action::Changed];
-            }
-        }
         self.scroll(s, (w, h), amount);
         Vec::new()
     }
@@ -2706,6 +2681,19 @@ mod tests {
         assert_eq!(ui.scroll.amount, content - (cols.bottom - cols.top));
         ui.scroll(&s, SIZE, 1000.0);
         assert_eq!(ui.scroll.amount, 0.0);
+    }
+
+    #[test]
+    fn wheel_over_a_toggle_only_scrolls_the_graphics_list() {
+        let mut s = Settings::default();
+        let mut ui = GraphicsUi::default();
+        s.horizon.sky = true;
+        let sky = row(&mut ui, &s, Item::Horizon(H::Sky));
+        let before = s.horizon.sky;
+        let scroll = ui.scroll_amount();
+        ui.wheel(&mut s, SIZE, (sky[0] + 5.0, sky[1] + 5.0), FB, -1.0);
+        assert_eq!(s.horizon.sky, before);
+        assert!(ui.scroll_amount() > scroll);
     }
 
     #[test]

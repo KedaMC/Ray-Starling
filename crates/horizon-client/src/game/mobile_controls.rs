@@ -1838,6 +1838,27 @@ impl Game<'_> {
                 },
                 InputOrigin::User,
             ),
+            Gesture::DragStart => self.handle_window_event(
+                events,
+                id,
+                WindowEvent::MouseInput {
+                    device_id: t.device_id,
+                    button: MouseButton::Left,
+                    state: ElementState::Pressed,
+                },
+                InputOrigin::User,
+            ),
+            Gesture::Drag => {}
+            Gesture::DragEnd => self.handle_window_event(
+                events,
+                id,
+                WindowEvent::MouseInput {
+                    device_id: t.device_id,
+                    button: MouseButton::Left,
+                    state: ElementState::Released,
+                },
+                InputOrigin::User,
+            ),
             Gesture::None => {}
         }
         self.android_menu_touch_release(t.phase);

@@ -6324,20 +6324,7 @@ impl OptionsUi {
         }
         events
     }
-    /// The mouse wheel at the cursor. Vanilla scrolls the list
-    /// (`AbstractScrollArea.mouseScrolled`), except that a hovered cycle button
-    /// takes the step and keeps the wheel (`CycleButton.mouseScrolled`: up goes
-    /// back); `AbstractSliderButton` does not override it, so a slider under the
-    /// cursor lets the list scroll.
-    ///
-    /// **Horizon improvement (diverges from Vanilla 26.3):** a slider or cycle
-    /// button focused by the keyboard (Tab, the arrows, a pad) steps or cycles on
-    /// the wheel wherever the cursor is. Vanilla 26.3 does not intercept the wheel
-    /// for sliders at all; this makes keyboard navigation far more usable. Focus
-    /// left by a click does not count (`focus_from_keyboard`): vanilla's wheel
-    /// ignores it, and honouring it toggled the clicked option on every later wheel
-    /// event, from anywhere on the screen, while the list never scrolled.
-    /// The graphics screen has its own wheel (`GraphicsUi::wheel`).
+    /// The mouse wheel scrolls the current list; it never activates a setting.
     pub fn wheel(
         &mut self,
         s: &mut Settings,
@@ -6348,82 +6335,8 @@ impl OptionsUi {
     ) -> Vec<Event> {
         self.size = size;
         self.framebuffer = framebuffer;
-        if Self::graphics_page(self.page()).is_some() {
-            let actions = self.graphics.wheel(s, size, cursor, framebuffer, amount);
-            return self.graphics_events(s, actions);
-        }
-        let plain = self.resource_error.is_none()
-            && !(self.pack_screen.is_some() && self.stack.last() == Some(&Page::Packs));
-        // The "Scroll wheel changes settings" extra off: the wheel only scrolls.
-        if !plain || !s.extras.wheel_cycles_settings {
-            self.scroll_at(s, size, cursor, amount);
-            return Vec::new();
-        }
-        // Horizon improvement: a keyboard-focused slider or cycle button
-        // intercepts the wheel before hover detection (see doc-comment above).
-        // A click focuses its widget for the highlight too, and vanilla's wheel
-        // must not act on that: it would toggle the clicked option from anywhere
-        // on the screen and the list would never scroll.
-        if amount != 0.0 && self.focus_from_keyboard {
-            let (widgets, _, _, _) = self.layout(s, size.0, size.1);
-            match &self.focus {
-                Some(FocusId::Slider(opt)) => {
-                    let opt = *opt;
-                    let width = widgets
-                        .iter()
-                        .find(|wd| matches!(&wd.kind, WKind::Slider { opt: o, .. } if *o == opt))
-                        .map_or(150.0, |wd| wd.w);
-                    return self.step_slider_option(s, opt, amount > 0.0, width);
-                }
-                Some(FocusId::Cycle(opt)) => {
-                    let opt = *opt;
-                    let mut events = vec![Event::ButtonClick];
-                    events.extend(self.cycle_option(s, opt, amount > 0.0, framebuffer));
-                    return events;
-                }
-                _ => {}
-            }
-        }
-        enum HoveredControl {
-            Cycle(Opt),
-            Extra(crate::extras::Item),
-        }
-        let (widgets, top, bottom, _) = self.layout(s, size.0, size.1);
-        let hovered = widgets.iter().find_map(|wd| match &wd.kind {
-            WKind::Button {
-                active: true,
-                act: Act::Cycle(opt),
-                ..
-            } if ui::hovered(cursor, wd.x, wd.y, wd.w, wd.h)
-                && !(wd.list && (cursor.1 < top || cursor.1 >= bottom)) =>
-            {
-                Some(HoveredControl::Cycle(*opt))
-            }
-            WKind::Button {
-                active: true,
-                act: Act::Extra(item),
-                ..
-            } if ui::hovered(cursor, wd.x, wd.y, wd.w, wd.h)
-                && !(wd.list && (cursor.1 < top || cursor.1 >= bottom)) =>
-            {
-                Some(HoveredControl::Extra(*item))
-            }
-            _ => None,
-        });
-        match hovered {
-            Some(HoveredControl::Cycle(opt)) if amount != 0.0 => {
-                self.cycle_option(s, opt, amount > 0.0, framebuffer)
-            }
-            Some(HoveredControl::Extra(item)) if amount != 0.0 => {
-                item.cycle(&mut s.extras, amount > 0.0);
-                vec![Event::Changed]
-            }
-            Some(_) => Vec::new(),
-            None => {
-                self.scroll_at(s, size, cursor, amount);
-                Vec::new()
-            }
-        }
+        self.scroll_at(s, size, cursor, amount);
+        Vec::new()
     }
     /// The mouse wheel at the cursor.
     pub fn scroll_at(&mut self, s: &Settings, size: (f32, f32), cursor: (f32, f32), amount: f32) {
@@ -10089,28 +10002,19 @@ mod tests {
         let mut s = Settings::default();
         let mut ui = OptionsUi::default();
 
-        // 1. Extras page: scrolling wheel on Sort switch cycles it
+        // A wheel over an ON/OFF control must not toggle it.
         ui.show(Page::Extras);
         let size = (480.0, 600.0);
         let (widgets, _, _, _) = ui.layout(&s, size.0, size.1);
-        let sort_wd = widgets
-            .iter()
-            .find(|w| {
-                matches!(
-                    w.kind,
-                    WKind::Button {
-                        act: Act::Extra(crate::extras::Item::Sort),
-                        ..
-                    }
-                )
+        let sort_wd = widgets.iter().find(|w| {
+            matches!(w.kind, WKind::Button {
+                act: Act::Extra(crate::extras::Item::Sort), ..
             })
-            .unwrap();
+        }).unwrap();
         let cursor = (sort_wd.x + 5.0, sort_wd.y + 5.0);
-        assert!(!s.extras.sort);
+        let before = s.extras.sort;
         ui.wheel(&mut s, size, cursor, [854, 480], 1.0);
-        assert!(s.extras.sort);
-        ui.wheel(&mut s, size, cursor, [854, 480], 1.0);
-        assert!(!s.extras.sort);
+        assert_eq!(s.extras.sort, before);
 
         // 2. Horizon Graphics page through OptionsUi:
         // Tab onto ChunkUpdates slider, ArrowRight adjusts value, Space toggles can_change_value
@@ -10217,63 +10121,44 @@ mod tests {
         assert!(!events.contains(&Event::Changed));
         assert!(ui.scroll > start, "the list scrolls down instead");
 
-        // Keyboard focus keeps the documented divergence: the wheel steps it
-        // wherever the cursor is, even off the widget.
+        // Keyboard focus never turns a mouse-wheel event into a setting change.
         ui.focus = Some(FocusId::Cycle(Opt::ViewBobbing));
         ui.focus_from_keyboard = true;
+        let start = ui.scroll;
         let events = ui.wheel(&mut s, size, cursor, framebuffer, -1.0);
-        assert_ne!(s.view_bobbing, before, "a keyboard-focused option cycles");
-        assert!(events.contains(&Event::ButtonClick));
-        assert!(events.contains(&Event::Changed));
+        assert_eq!(s.view_bobbing, before);
+        assert!(!events.contains(&Event::ButtonClick));
+        assert!(!events.contains(&Event::Changed));
+        assert!(ui.scroll > start);
     }
 
     #[test]
-    fn the_wheel_only_scrolls_with_the_extra_off() {
+    fn the_wheel_always_scrolls_over_settings_controls() {
         let mut s = Settings::default();
         let mut ui = OptionsUi::default();
         ui.show(Page::Video);
         let framebuffer = [854, 480];
         let size = (427.0, 240.0);
         let (widgets, top, bottom, content) = ui.layout(&s, size.0, size.1);
-        assert!(
-            content > bottom - top,
-            "the video page scrolls at this size"
-        );
-        let (opt, over) = widgets
-            .iter()
-            .find_map(|wd| match wd.kind {
-                WKind::Button {
-                    act: Act::Cycle(opt),
-                    ..
-                } if !wd.list || (wd.y >= top && wd.y + wd.h <= bottom) => {
-                    Some((opt, (wd.x + 5.0, wd.y + 5.0)))
-                }
-                _ => None,
-            })
-            .expect("a visible cycle button");
-
-        s.extras.wheel_cycles_settings = false;
+        assert!(content > bottom - top);
+        let (opt, cursor) = widgets.iter().find_map(|wd| match wd.kind {
+            WKind::Button { act: Act::Cycle(opt), .. }
+                if !wd.list || (wd.y >= top && wd.y + wd.h <= bottom) =>
+            { Some((opt, (wd.x + 5.0, wd.y + 5.0))) }
+            _ => None,
+        }).expect("visible cycle control");
         let before = format!("{s:?}");
         let start = ui.scroll;
-        let events = ui.wheel(&mut s, size, over, framebuffer, -1.0);
-        assert_eq!(format!("{s:?}"), before, "the hovered option stays put");
-        assert!(!events.contains(&Event::Changed));
-        assert!(
-            ui.scroll > start,
-            "the list scrolls under the cursor instead"
-        );
-        // Keyboard focus doesn't take the wheel either.
+        ui.wheel(&mut s, size, cursor, framebuffer, -1.0);
+        assert_eq!(format!("{s:?}"), before, "the hovered setting stays unchanged");
+        assert!(ui.scroll > start, "the list scrolls beneath the cursor");
         ui.focus = Some(FocusId::Cycle(opt));
         ui.focus_from_keyboard = true;
-        ui.wheel(&mut s, size, over, framebuffer, -1.0);
-        assert_eq!(format!("{s:?}"), before);
-
-        // On (the default), vanilla's CycleButton.mouseScrolled again.
-        s.extras.wheel_cycles_settings = true;
-        let before = format!("{s:?}");
-        let events = ui.wheel(&mut s, size, over, framebuffer, -1.0);
-        assert_ne!(format!("{s:?}"), before, "{opt:?} cycles");
-        assert!(events.contains(&Event::Changed));
+        let start = ui.scroll;
+        let events = ui.wheel(&mut s, size, cursor, framebuffer, -1.0);
+        assert_eq!(format!("{s:?}"), before, "keyboard focus does not intercept mouse wheel");
+        assert!(!events.contains(&Event::Changed));
+        assert!(ui.scroll > start);
     }
 
     #[test]

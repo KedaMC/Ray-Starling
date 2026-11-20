@@ -135,9 +135,6 @@ pub struct Extras {
     pub splitscreen_three: u8,
     /// Splitscreen: each player's name in the corner of their view (`splitscreenNames`).
     pub splitscreen_names: bool,
-    /// The wheel over a cycle button in the settings changes it (`CycleButton.mouseScrolled`,
-    /// on by default as vanilla); off, the wheel only scrolls the list.
-    pub wheel_cycles_settings: bool,
     /// The built-in music tracks the Music page turned off (sound ids): they
     /// leave every pool they play in (`musicOff`, empty by default: vanilla's
     /// random selection).
@@ -192,7 +189,6 @@ impl Default for Extras {
             splitscreen_two: 0,
             splitscreen_three: 0,
             splitscreen_names: true,
-            wheel_cycles_settings: true,
             music_off: Vec::new(),
             music_page: false,
             cosmetics_mine: true,
@@ -281,7 +277,6 @@ impl Extras {
                 "splitscreenTwo" => e.splitscreen_two = value.parse().unwrap_or(0).min(2),
                 "splitscreenThree" => e.splitscreen_three = value.parse().unwrap_or(0).min(2),
                 "splitscreenNames" => e.splitscreen_names = flag(e.splitscreen_names),
-                "wheelCyclesSettings" => e.wheel_cycles_settings = flag(e.wheel_cycles_settings),
                 "musicOff" => {
                     e.music_off = value
                         .split(',')
@@ -300,7 +295,7 @@ impl Extras {
     }
     pub fn serialize(&self) -> String {
         format!(
-            "fullbright:{}\ndynamicLights:{}\nzoom:{}\nzoomKey:{}\nzoomLevel:{}\nzoomSmooth:{}\nzoomSensitivity:{}\nfps:{}\nfpsCorner:{}\nfpsLows:{}\nkeystrokes:{}\nkeystrokesCorner:{}\nkeystrokesCps:{}\nmovedToMods:{}\nminimap:{}\nminimapCorner:{}\nminimapSize:{}\nminimapShape:{}\nminimapZoom:{}\nminimapRotate:{}\nautoReconnect:{}\nuiSoundReserve:{}\nownNameTag:{}\nhideBlockParticles:{}\nmouseTweaks:{}\nmouseTweaksWheel:{}\nsort:{}\nsortKey:{}\nchatAnimation:{}\nchatIndicator:{}\n{}:{}\nagentControl:{}\nreproKeys:{}\ndiscordPresence:{}\nsplitscreen:{}\nsplitscreenTwo:{}\nsplitscreenThree:{}\nsplitscreenNames:{}\nwheelCyclesSettings:{}\nmusicOff:{}\nmusicPage:{}\ncosmeticsMine:{}\ncosmeticsOthers:{}\n",
+            "fullbright:{}\ndynamicLights:{}\nzoom:{}\nzoomKey:{}\nzoomLevel:{}\nzoomSmooth:{}\nzoomSensitivity:{}\nfps:{}\nfpsCorner:{}\nfpsLows:{}\nkeystrokes:{}\nkeystrokesCorner:{}\nkeystrokesCps:{}\nmovedToMods:{}\nminimap:{}\nminimapCorner:{}\nminimapSize:{}\nminimapShape:{}\nminimapZoom:{}\nminimapRotate:{}\nautoReconnect:{}\nuiSoundReserve:{}\nownNameTag:{}\nhideBlockParticles:{}\nmouseTweaks:{}\nmouseTweaksWheel:{}\nsort:{}\nsortKey:{}\nchatAnimation:{}\nchatIndicator:{}\n{}:{}\nagentControl:{}\nreproKeys:{}\ndiscordPresence:{}\nsplitscreen:{}\nsplitscreenTwo:{}\nsplitscreenThree:{}\nsplitscreenNames:{}\nmusicOff:{}\nmusicPage:{}\ncosmeticsMine:{}\ncosmeticsOthers:{}\n",
             bool_text(self.fullbright),
             bool_text(self.dynamic_lights),
             bool_text(self.zoom),
@@ -344,7 +339,6 @@ impl Extras {
             self.splitscreen_two,
             self.splitscreen_three,
             bool_text(self.splitscreen_names),
-            bool_text(self.wheel_cycles_settings),
             self.music_off.join(","),
             bool_text(self.music_page),
             bool_text(self.cosmetics_mine),
@@ -495,7 +489,6 @@ pub enum Item {
     ReproKeys,
     /// On the Splitscreen settings page.
     Splitscreen,
-    WheelCyclesSettings,
     /// Shown only while cosmetics are enabled (`horizon_cosmetics::enabled`).
     CosmeticsMine,
     CosmeticsOthers,
@@ -525,7 +518,6 @@ pub fn rows() -> Vec<Result<Item, &'static str>> {
         Ok(UiSoundReserve),
         Ok(MusicPage),
         Err("horizon.extras.header.menus"),
-        Ok(WheelCyclesSettings),
     ];
     if horizon_cosmetics::enabled() {
         rows.extend([
@@ -558,7 +550,6 @@ impl Item {
             Item::Splitscreen => "horizon.extras.splitscreen",
             Item::ChatAnimation => "horizon.extras.chat_animation",
             Item::ChatIndicator => "horizon.extras.chat_indicator",
-            Item::WheelCyclesSettings => "horizon.extras.wheel_cycles_settings",
             Item::CosmeticsMine => "horizon.extras.cosmetics_mine",
             Item::CosmeticsOthers => "horizon.extras.cosmetics_others",
         }
@@ -584,7 +575,6 @@ impl Item {
             Item::Splitscreen => "horizon.extras.splitscreen.tooltip",
             Item::ChatAnimation => "horizon.extras.chat_animation.tooltip",
             Item::ChatIndicator => "horizon.extras.chat_indicator.tooltip",
-            Item::WheelCyclesSettings => "horizon.extras.wheel_cycles_settings.tooltip",
             Item::CosmeticsMine => "horizon.extras.cosmetics_mine.tooltip",
             Item::CosmeticsOthers => "horizon.extras.cosmetics_others.tooltip",
         }
@@ -619,7 +609,6 @@ impl Item {
             Item::ReproKeys => "Recording shortcuts",
             Item::DiscordPresence => "Discord Rich Presence",
             Item::Splitscreen => "Splitscreen",
-            Item::WheelCyclesSettings => "Scroll wheel changes settings",
             Item::CosmeticsMine => "My cosmetics",
             Item::CosmeticsOthers => "Other players' cosmetics",
         }
@@ -634,7 +623,7 @@ impl Item {
             ChatIndicator => ChatAnimation,
             Fullbright | DynamicLights | OwnNameTag | HideBlockParticles | MouseTweaks | Sort
             | AutoReconnect | NoAi | AgentControl | ReproKeys | DiscordPresence | Splitscreen
-            | ChatAnimation | WheelCyclesSettings | MusicPage | CosmeticsMine | CosmeticsOthers => {
+            | ChatAnimation | MusicPage | CosmeticsMine | CosmeticsOthers => {
                 return None;
             }
         })
@@ -698,9 +687,6 @@ impl Item {
             Item::CosmeticsOthers => {
                 "Shows the cosmetics other Horizon players wear. Off, the game never asks what they wear."
             }
-            Item::WheelCyclesSettings => {
-                "The scroll wheel over a button in the settings changes its value, as in vanilla. Off, the wheel only scrolls the list."
-            }
         }
     }
     /// The frame-time cost the main switch of an extra shows.
@@ -717,8 +703,7 @@ impl Item {
             | Item::AutoReconnect
             | Item::MouseTweaks
             | Item::Sort
-            | Item::Splitscreen
-            | Item::WheelCyclesSettings => Some(Cost::None),
+            | Item::Splitscreen => Some(Cost::None),
             Item::CosmeticsMine | Item::CosmeticsOthers => Some(Cost::Low),
             _ => None,
         }
@@ -743,7 +728,6 @@ impl Item {
             Item::ReproKeys => e.repro_keys,
             Item::DiscordPresence => e.discord_presence,
             Item::Splitscreen => e.splitscreen,
-            Item::WheelCyclesSettings => e.wheel_cycles_settings,
             Item::CosmeticsMine => e.cosmetics_mine,
             Item::CosmeticsOthers => e.cosmetics_others,
             _ => return None,
@@ -780,7 +764,6 @@ impl Item {
             Item::ReproKeys => e.repro_keys = !e.repro_keys,
             Item::DiscordPresence => e.discord_presence = !e.discord_presence,
             Item::Splitscreen => e.splitscreen = !e.splitscreen,
-            Item::WheelCyclesSettings => e.wheel_cycles_settings = !e.wheel_cycles_settings,
             Item::CosmeticsMine => e.cosmetics_mine = !e.cosmetics_mine,
             Item::CosmeticsOthers => e.cosmetics_others = !e.cosmetics_others,
             Item::SortKey => {}
@@ -807,7 +790,7 @@ mod tests {
         assert!(!d.mouse_tweaks && !d.sort && !d.own_name_tag && !d.ui_sound_reserve);
         assert!(!d.hide_block_particles);
         assert!(!d.music_page && d.music_off.is_empty());
-        assert!(d.discord_presence && d.wheel_cycles_settings);
+        assert!(d.discord_presence);
         assert_eq!(Extras::parse(""), d);
         assert_eq!(Extras::parse(&d.serialize()), d);
         let mut e = d.clone();
@@ -848,8 +831,6 @@ mod tests {
         assert!(!e.splitscreen);
         Item::Splitscreen.cycle(&mut e, false);
         assert_eq!(Item::Splitscreen.switch(&e), Some(true));
-        Item::WheelCyclesSettings.cycle(&mut e, false);
-        assert_eq!(Item::WheelCyclesSettings.switch(&e), Some(false));
         e.music_off = vec![
             "minecraft:music/game/calm1".into(),
             "minecraft:music.menu".into(),
