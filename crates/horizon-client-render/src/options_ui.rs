@@ -9406,8 +9406,9 @@ mod tests {
         };
         // Starling Settings is centered above the first vanilla Options row.
         let main = pushes(&mut ui);
-        assert_eq!(main[0], Page::Horizon);
-        assert_eq!(&main[1..3], [Page::Skin, Page::Sound]);
+        // The Online button remains first; Starling Settings follows it.
+        assert_eq!(main[1], Page::Horizon);
+        assert_eq!(&main[2..4], [Page::Skin, Page::Sound]);
         assert!(main.contains(&Page::Credits));
         ui.push(Page::Horizon);
         assert_eq!(
