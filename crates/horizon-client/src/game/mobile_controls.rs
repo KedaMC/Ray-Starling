@@ -153,8 +153,15 @@ impl Game<'_> {
             self.android_touch_haptic(10);
         }
     }
+    /// `horizon-graphics.txt` owns the render resolution; the hub copy only mirrors it.
+    fn mobile_sync_resolution_scale(&mut self) {
+        let pct = self.settings.horizon.resolution_scale.clamp(25, 100);
+        self.mobile.controls.settings.resolution_scale_percent = pct;
+        self.settings.touch.resolution_scale_percent = pct;
+    }
     pub(in crate::game) fn mobile_options_apply(&mut self) {
         self.mobile.controls.settings = self.settings.touch.clone();
+        self.mobile_sync_resolution_scale();
         self.mobile.ui.menu_direct_pointer = self.settings.touch.virtual_mouse_hidden;
         self.input_used(self.input_mode);
         if let Err(e) = self.mobile.controls.settings.save() {
@@ -163,6 +170,7 @@ impl Game<'_> {
     }
     pub(in crate::game) fn mobile_options_open(&mut self) {
         self.mobile_init();
+        self.mobile_sync_resolution_scale();
         self.settings.touch = self.mobile.controls.settings.clone();
     }
     fn mobile_init(&mut self) {
@@ -175,6 +183,7 @@ impl Game<'_> {
             horizon_client::android_control_theme::set_android_dpi(w.scale_factor() as f32);
         }
         self.mobile.controls.settings = self.settings.touch.clone();
+        self.mobile_sync_resolution_scale();
         self.settings.touch.virtual_mouse_hidden = true;
         self.mobile.controls.settings.virtual_mouse_hidden = true;
         self.mobile.ui.menu_direct_pointer = true;
@@ -1346,25 +1355,10 @@ impl Game<'_> {
                     self.mobile.controls.settings.toggle_split_touch();
                     let _ = self.mobile.controls.settings.save();
                 }
-                InGameMenuAction::ToggleInvertY => {
-                    let next = !self.mobile.controls.settings.invert_y;
-                    self.mobile.controls.settings.invert_y = next;
-                    self.settings.invert_y = next;
-                    let _ = self.mobile.controls.settings.save();
-                    self.settings.save(&Self::options_path());
-                }
                 InGameMenuAction::ToggleLeftHanded => {
                     self.mobile.controls.settings.left_handed =
                         !self.mobile.controls.settings.left_handed;
                     let _ = self.mobile.controls.settings.save();
-                }
-                InGameMenuAction::ToggleSprintMode => {
-                    let next = !self.mobile.controls.settings.sprint_toggle;
-                    self.mobile.controls.settings.sprint_toggle = next;
-                    self.mobile.controls.settings.toggle_sprint = next;
-                    self.settings.toggle_sprint = next;
-                    let _ = self.mobile.controls.settings.save();
-                    self.settings.save(&Self::options_path());
                 }
                 InGameMenuAction::ToggleInventoryControls => {
                     self.mobile.controls.settings.inventory_controls =
@@ -1387,16 +1381,6 @@ impl Game<'_> {
                     } else {
                         mobile_platform::cancel_vibration();
                     }
-                }
-                InGameMenuAction::ToggleAutoJump => {
-                    let next = !self.mobile.controls.settings.auto_jump;
-                    self.mobile.controls.settings.auto_jump = next;
-                    self.settings.auto_jump = next;
-                    if let Some(player) = &mut self.player {
-                        player.auto_jump_enabled = next;
-                    }
-                    let _ = self.mobile.controls.settings.save();
-                    self.settings.save(&Self::options_path());
                 }
                 InGameMenuAction::ToggleKeyboardButton => {
                     self.mobile.controls.settings.keyboard_button ^= true;
@@ -1526,17 +1510,6 @@ impl Game<'_> {
                         self.settings.save(&Self::options_path());
                     }
                 }
-                InGameMenuAction::ToggleGameAnimations => {
-                    let next = !self.mobile.controls.settings.disable_game_animations;
-                    self.mobile.controls.settings.disable_game_animations = next;
-                    horizon_client::android_control_theme::motion::set_game_animations_disabled(
-                        next,
-                    );
-                    let _ = self.mobile.controls.settings.save();
-                    if let Some(r) = self.renderer.as_mut() {
-                        r.animated_textures = self.settings.horizon.animated_textures && !next;
-                    }
-                }
                 InGameMenuAction::SendCustomInput(token) => {
                     self.android_sync_pointer();
                     self.android_custom_token_tap(&token);
@@ -1544,6 +1517,7 @@ impl Game<'_> {
             }
             // Hub actions edit the live controls while Options edits its copy.
             // Keep that copy current before another option change applies it.
+            self.mobile_sync_resolution_scale();
             self.settings.touch = self.mobile.controls.settings.clone();
             return Ok(true);
         }

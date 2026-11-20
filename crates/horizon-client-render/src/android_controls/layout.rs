@@ -512,8 +512,6 @@ pub struct Settings {
     pub keyboard_button: bool,
     /// Explicit Mouse-button hide override, retained across launches.
     pub virtual_mouse_hidden: bool,
-    #[serde(default)]
-    pub disable_game_animations: bool,
     #[serde(default = "default_res_scale")]
     pub resolution_scale_percent: u32,
     pub virtual_mouse_sensitivity: f32,
@@ -673,7 +671,6 @@ impl Default for Settings {
             virtual_mouse_enabled: false,
             keyboard_button: false,
             virtual_mouse_hidden: true,
-            disable_game_animations: false,
             resolution_scale_percent: default_res_scale(),
             virtual_mouse_sensitivity: 1.0,
             virtual_mouse_pointer_scale: default_pointer_scale(),
@@ -1303,6 +1300,7 @@ impl Settings {
         let prev_ui_vibrate = self.ui_vibrate;
         let prev_hub = self.show_control_hub;
         let prev_auto_jump = self.auto_jump;
+        let prev_res_scale = self.resolution_scale_percent;
         let mut loaded = Self::load_preset(game_home, style, id);
         let clean = loaded.preset_id.clone();
         loaded.active_mcpe_preset = if style == ControlStyle::Mcpe {
@@ -1325,6 +1323,7 @@ impl Settings {
         loaded.ui_vibrate = prev_ui_vibrate;
         loaded.show_control_hub = prev_hub;
         loaded.auto_jump = prev_auto_jump;
+        loaded.resolution_scale_percent = prev_res_scale;
         *self = loaded;
         let _ = self.save_to(&game_home.join("horizon-touch.json"));
     }
@@ -1362,6 +1361,7 @@ impl Settings {
         let prev_ui_vibrate = self.ui_vibrate;
         let prev_hub = self.show_control_hub;
         let prev_auto_jump = self.auto_jump;
+        let prev_res_scale = self.resolution_scale_percent;
         let mut loaded = Self::load_preset(game_home, target, &target_preset_id);
         loaded.control_style = target;
         loaded.active_mcpe_preset = prev_mcpe;
@@ -1376,6 +1376,7 @@ impl Settings {
         loaded.ui_vibrate = prev_ui_vibrate;
         loaded.show_control_hub = prev_hub;
         loaded.auto_jump = prev_auto_jump;
+        loaded.resolution_scale_percent = prev_res_scale;
         *self = loaded;
         let _ = self.save_to(&game_home.join("horizon-touch.json"));
     }
@@ -1844,6 +1845,7 @@ impl Settings {
             let prev_ui_vibrate = self.ui_vibrate;
             let prev_hub = self.show_control_hub;
             let prev_auto_jump = self.auto_jump;
+        let prev_res_scale = self.resolution_scale_percent;
             *self = Self::default_for_style(style);
             self.active_mcpe_preset = prev_mcpe;
             self.active_goy_preset = prev_goy;
@@ -1857,6 +1859,7 @@ impl Settings {
             self.ui_vibrate = prev_ui_vibrate;
             self.show_control_hub = prev_hub;
             self.auto_jump = prev_auto_jump;
+            self.resolution_scale_percent = prev_res_scale;
             match style {
                 ControlStyle::Mcpe => self.active_mcpe_preset = "default".into(),
                 ControlStyle::GoyControl => self.active_goy_preset = "default".into(),
@@ -1895,6 +1898,7 @@ impl Settings {
         loaded.ui_vibrate = active.ui_vibrate;
         loaded.show_control_hub = active.show_control_hub;
         loaded.auto_jump = active.auto_jump;
+        loaded.resolution_scale_percent = active.resolution_scale_percent;
         match loaded.control_style {
             ControlStyle::Mcpe => loaded.active_mcpe_preset = loaded.preset_id.clone(),
             ControlStyle::GoyControl => loaded.active_goy_preset = loaded.preset_id.clone(),

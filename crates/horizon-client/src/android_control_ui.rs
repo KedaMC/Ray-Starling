@@ -157,18 +157,15 @@ pub enum InGameMenuAction {
     ToggleSplitTouch,
     ToggleAnalogMovement,
     ToggleInteractionLook,
-    ToggleInvertY,
     ToggleLeftHanded,
     ToggleKeyboardButton,
     ToggleOffhandButton,
     ToggleShieldButton,
     ToggleGyro,
     ToggleVirtualMouse,
-    ToggleSprintMode,
     ToggleInventoryControls,
     ToggleVibrate,
     ToggleUiVibrate,
-    ToggleAutoJump,
     SetTouchSensitivity(f32),
     StepTouchSensitivity(i32),
     SetVirtualMouseSpeed(f32),
@@ -188,8 +185,6 @@ pub enum InGameMenuAction {
     EditPresetField(bool),
     /// Adjust real-time 3D world resolution scale percentage (25%..=100%) without recreating UI surface.
     SetResolutionScale(u32),
-    /// Toggle in-game animations (animated textures, view bobbing, chunk fade, UI transitions).
-    ToggleGameAnimations,
     /// Send a custom keyboard key, mouse button/scroll, or gameplay action token immediately.
     SendCustomInput(String),
 }
@@ -1660,9 +1655,7 @@ fn hub_metrics(w: f32, h: f32) -> (f32, f32, f32, f32, f32, f32, f32, f32, f32) 
 impl TouchUi {
     fn step_animations(&self) -> (f32, f32) {
         let open_target = if self.floating_menu { 1.0 } else { 0.0 };
-        if crate::android_control_theme::motion::game_animations_disabled()
-            || crate::android_control_theme::motion::reduced_motion()
-        {
+        if crate::android_control_theme::motion::reduced_motion() {
             self.open_anim.set(open_target);
             self.tab_anim.set(1.0);
             return (open_target, 1.0);
@@ -2468,10 +2461,6 @@ impl TouchUi {
                     self.floating_menu = false;
                     return Some(InGameMenuAction::OpenControlEditor);
                 }
-                let anim_y = body_y + 394.0;
-                if inside([cx, anim_y, cw, 46.0]) {
-                    return Some(InGameMenuAction::ToggleGameAnimations);
-                }
             }
             1 => {
                 // Tab 1: Controls
@@ -2512,17 +2501,11 @@ impl TouchUi {
                     return Some(InGameMenuAction::ToggleVirtualMouse);
                 }
 
-                // Invert Y-Axis (y = body_y + 260.0, h = 46.0)
-                let inv_y = body_y + 260.0;
-                if inside([cx, inv_y, cw, 46.0]) {
-                    return Some(InGameMenuAction::ToggleInvertY);
-                }
-
-                if inside([cx, body_y + 368., cw, 46.]) {
+                if inside([cx, body_y + 314., cw, 46.]) {
                     return Some(InGameMenuAction::ToggleAnalogMovement);
                 }
-                // Split Touch (Aim & Look) (y = body_y + 314.0, h = 46.0)
-                let spl_y = body_y + 314.0;
+                // Split Touch (Aim & Look) (y = body_y + 260.0, h = 46.0)
+                let spl_y = body_y + 260.0;
                 if inside([cx, spl_y, cw, 46.0]) {
                     return Some(InGameMenuAction::ToggleSplitTouch);
                 }
@@ -2573,10 +2556,10 @@ impl TouchUi {
                 }
             }
             3 => {
-                if inside([cx, body_y + 234., cw, 46.]) {
+                if inside([cx, body_y + 180., cw, 46.]) {
                     return Some(InGameMenuAction::ToggleOffhandButton);
                 }
-                if inside([cx, body_y + 288., cw, 46.]) {
+                if inside([cx, body_y + 234., cw, 46.]) {
                     return Some(InGameMenuAction::ToggleShieldButton);
                 }
                 // Tab 3: Buttons & Layout Options
@@ -2593,9 +2576,6 @@ impl TouchUi {
                     return Some(InGameMenuAction::ToggleLeftHanded);
                 }
                 if inside([cx, body_y + 18.0 + step * 2.0, cw, row_h]) {
-                    return Some(InGameMenuAction::ToggleSprintMode);
-                }
-                if inside([cx, body_y + 18.0 + step * 3.0, cw, row_h]) {
                     return Some(InGameMenuAction::ToggleInventoryControls);
                 }
             }
@@ -2611,12 +2591,9 @@ impl TouchUi {
                     });
                 }
                 if inside([cx, body_y + 18.0 + step, cw, row_h]) {
-                    return Some(InGameMenuAction::ToggleAutoJump);
-                }
-                if inside([cx, body_y + 18.0 + step * 2.0, cw, row_h]) {
                     return Some(InGameMenuAction::PresetVisibilityAll);
                 }
-                let ky = body_y + 198.0;
+                let ky = body_y + 144.0;
                 let kw = (cw - 25.0) / 6.0;
                 let quick = [
                     KeyCode::F1,
@@ -2636,13 +2613,13 @@ impl TouchUi {
                     self.floating_menu = false;
                     return Some(InGameMenuAction::OpenKeyboard);
                 }
-                let send_y = body_y + 244.0;
+                let send_y = body_y + 190.0;
                 if inside([cx, send_y, cw, 40.0]) {
                     self.custom_input_picker =
                         crate::android_controls::PickerStep::AskInputType { event_slot: 0 };
                     return Some(InGameMenuAction::Close);
                 }
-                let sys_y = body_y + 292.0;
+                let sys_y = body_y + 238.0;
                 let half = (cw - 10.0) * 0.5;
                 if inside([cx, sys_y, half, 38.0]) {
                     self.floating_menu = false;
@@ -2887,11 +2864,11 @@ impl TouchUi {
         // Scrollable Right Content Panel with scissor clip and tab transition slide
         let tab_slide = (1.0 - tab_ease) * 14.0;
         let content_height = match self.hub_tab {
-            0 => 448.0,
-            1 => 430.0,
+            0 => 394.0,
+            1 => 376.0,
             2 => 470.0,
-            3 => 350.0,
-            _ => 340.0,
+            3 => 296.0,
+            _ => 286.0,
         };
         let max_scroll = (content_height - body_h).max(0.0);
         self.hub_max_scroll.set(max_scroll);
@@ -3159,15 +3136,6 @@ impl TouchUi {
                     ui.text(Face::SemiBold, 10.4, rx + 42.0, act_y + 6.0, text_c, title);
                     ui.text(Face::Regular, 8.6, rx + 42.0, act_y + 23.0, muted_c, sub);
                 }
-
-                draw_toggle_row(
-                    &mut ui,
-                    body_y + 394.0,
-                    "In-Game Animations",
-                    "Animated block textures, view bobbing, FOV transitions & menu motion",
-                    Some(!settings.disable_game_animations),
-                    None,
-                );
             }
             1 => {
                 // 1. Control Mode Section
@@ -3328,14 +3296,6 @@ impl TouchUi {
                 draw_toggle_row(
                     &mut ui,
                     body_y + 260.0,
-                    "Invert Y-Axis",
-                    "Reverse vertical camera look direction",
-                    Some(settings.invert_y),
-                    None,
-                );
-                draw_toggle_row(
-                    &mut ui,
-                    body_y + 314.0,
                     "Split Touch (Aim & Look)",
                     "Use center crosshair instead of tap-anywhere interaction",
                     Some(settings.crosshair()),
@@ -3343,7 +3303,7 @@ impl TouchUi {
                 );
                 draw_toggle_row(
                     &mut ui,
-                    body_y + 368.,
+                    body_y + 314.,
                     &crate::lang::get("starling.controls.analog"),
                     &crate::lang::get("starling.controls.analog_hint"),
                     Some(settings.analog_movement),
@@ -3609,7 +3569,7 @@ impl TouchUi {
             3 => {
                 draw_toggle_row(
                     &mut ui,
-                    body_y + 234.,
+                    body_y + 180.,
                     "Offhand Button",
                     "Show the swap-hands button",
                     Some(settings.offhand_button),
@@ -3617,7 +3577,7 @@ impl TouchUi {
                 );
                 draw_toggle_row(
                     &mut ui,
-                    body_y + 288.,
+                    body_y + 234.,
                     "Separate Shield Button",
                     "Off uses crouching to raise the shield",
                     Some(settings.shield_button),
@@ -3696,14 +3656,6 @@ impl TouchUi {
                 draw_toggle_row(
                     &mut ui,
                     body_y + 18.0 + step * 2.0,
-                    "Toggle Sprint",
-                    "Latch sprint on tap instead of holding",
-                    Some(settings.sprint_toggle || settings.toggle_sprint),
-                    None,
-                );
-                draw_toggle_row(
-                    &mut ui,
-                    body_y + 18.0 + step * 3.0,
                     "Inventory Walk Controls",
                     "Keep movement controls active while inventory is open",
                     Some(settings.inventory_controls),
@@ -3761,14 +3713,6 @@ impl TouchUi {
                 draw_toggle_row(
                     &mut ui,
                     body_y + 18.0 + step,
-                    "Auto-Jump",
-                    "Automatically jump when walking into 1-block ledges",
-                    Some(settings.auto_jump),
-                    None,
-                );
-                draw_toggle_row(
-                    &mut ui,
-                    body_y + 18.0 + step * 2.0,
                     "Apply Standard Menu Visibility",
                     "Reset in-game vs in-menu visibility flags for active system",
                     None,
@@ -3778,11 +3722,11 @@ impl TouchUi {
                     Face::SemiBold,
                     10.0,
                     cx,
-                    body_y + 182.0,
+                    body_y + 128.0,
                     muted_c,
                     "QUICK DESKTOP KEYS & CUSTOM INPUT",
                 );
-                let ky = body_y + 198.0;
+                let ky = body_y + 144.0;
                 let kw = (cw - 25.0) / 6.0;
                 for (i, lbl) in ["F1", "F3", "F5", "Inv", "Chat", "Keys"]
                     .into_iter()
@@ -3799,7 +3743,7 @@ impl TouchUi {
                         lbl,
                     );
                 }
-                let send_y = body_y + 244.0;
+                let send_y = body_y + 190.0;
                 ui.rounded(cx, send_y, cw, 40.0, 10.0, card_sel);
                 ui.border(cx, send_y, cw, 40.0, 10.0, accent);
                 ui.icon(Icon::Gamepad, cx + 12.0, send_y + 11.0, 18.0, accent_hi);
@@ -3828,7 +3772,7 @@ impl TouchUi {
                     "›",
                 );
 
-                let sys_y = body_y + 292.0;
+                let sys_y = body_y + 238.0;
                 let half = (cw - 10.0) * 0.5;
                 ui.rounded(
                     cx,
