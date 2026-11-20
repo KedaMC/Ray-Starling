@@ -7,7 +7,7 @@ name: build
 # to pick other ABIs. Upstream's release and preview pipeline stays in android.yml.
 on:
   push:
-    branches: [starling, 'feat/**']
+    branches: [Ray-Starling, starling, 'feat/**']
   workflow_dispatch:
     inputs:
       abis:
