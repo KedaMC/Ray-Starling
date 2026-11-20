@@ -4431,7 +4431,9 @@ impl OptionsUi {
                     tr("options.online"),
                     Act::Push(Page::Online),
                 ));
-                let entries = [
+                // Starling Settings occupies a centered row above the vanilla Options grid.
+                let settings_key = "horizon.pages.open.horizon_settings";
+                let settings_y_rows = [
                     // Everywhere for the layers and Main Hand; `skin_page` adds the name and skin.
                     ("options.skinCustomisation", Some(Page::Skin)),
                     ("options.sounds", Some(Page::Sound)),
@@ -4447,17 +4449,23 @@ impl OptionsUi {
                         (!self.split_guest).then_some(Page::Packs),
                     ),
                     ("options.accessibility", Some(Page::Accessibility)),
-                    // Vanilla's Telemetry Data slot: Starling's settings. Mods live under it.
-                    // Credits & Attribution (WinScreen's credits) follows them.
-                    ("horizon.pages.open.horizon_settings", Some(Page::Horizon)),
+                    // Credits & Attribution (WinScreen's credits) follows the vanilla entries.
                     ("options.credits_and_attribution", Some(Page::Credits)),
                 ];
-                let entries = with_diagnostics(entries);
-                let rows = entries.len().div_ceil(2) as f32;
+                let entries = with_diagnostics(settings_y_rows);
+                let rows = 1.0 + entries.len().div_ceil(2) as f32;
                 let gy = (61.0 + 30.0f32).min(h - 33.0 - rows * 24.0);
+                let settings_button = button(
+                    cx - 75.0,
+                    gy,
+                    150.0,
+                    tr(settings_key),
+                    Act::Push(Page::Horizon),
+                );
+                out.push(settings_button);
                 for (i, (key, page)) in entries.iter().enumerate() {
                     let x = cx - 158.0 + 4.0 + (i % 2) as f32 * 158.0;
-                    let y = gy + (i / 2) as f32 * 24.0;
+                    let y = gy + 24.0 + (i / 2) as f32 * 24.0;
                     let b = button(x, y, 150.0, tr(key), page.map_or(Act::None, Act::Push));
                     out.push(if page.is_some() { b } else { inactive(b) });
                 }
@@ -9396,13 +9404,11 @@ mod tests {
                 })
                 .collect()
         };
-        // Vanilla's Options buttons, Starling's settings in the Telemetry slot, then
-        // Credits & Attribution (WinScreen's credits).
+        // Starling Settings is centered above the first vanilla Options row.
         let main = pushes(&mut ui);
-        assert_eq!(
-            &main[main.len() - 2..],
-            [Page::Horizon, Page::Credits]
-        );
+        assert_eq!(main[0], Page::Horizon);
+        assert_eq!(&main[1..3], [Page::Skin, Page::Sound]);
+        assert!(main.contains(&Page::Credits));
         ui.push(Page::Horizon);
         assert_eq!(
             pushes(&mut ui),

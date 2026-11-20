@@ -2460,20 +2460,6 @@ impl TouchUi {
                     let t = ((p[0] - sl_x) / sl_w).clamp(0.0, 1.0);
                     return Some(InGameMenuAction::SetVirtualMouseSpeed(0.25 + t * 2.75));
                 }
-                let act_y = body_y + 342.0;
-                let half_w = (cw - 10.0) * 0.5;
-                if inside([cx, act_y, half_w, 44.0]) {
-                    let next_style = if settings.control_style == ControlStyle::Mcpe {
-                        ControlStyle::GoyControl
-                    } else {
-                        ControlStyle::Mcpe
-                    };
-                    return Some(InGameMenuAction::SetControlStyle(next_style));
-                }
-                if inside([cx + half_w + 10.0, act_y, half_w, 44.0]) {
-                    self.floating_menu = false;
-                    return Some(InGameMenuAction::OpenControlEditor);
-                }
             }
             1 => {
                 // Tab 1: Controls
@@ -2877,7 +2863,7 @@ impl TouchUi {
         // Scrollable Right Content Panel with scissor clip and tab transition slide
         let tab_slide = (1.0 - tab_ease) * 14.0;
         let content_height = match self.hub_tab {
-            0 => 394.0,
+            0 => 342.0,
             1 => 376.0,
             2 => 470.0,
             3 => 296.0,
@@ -3127,28 +3113,6 @@ impl TouchUi {
                 );
                 ui.border(spd_thumb_x - 7.0, spd_sl_y - 4.0, 14.0, 14.0, 7.0, text_c);
 
-                let act_y = body_y + 342.0;
-                let half_w = (cw - 10.0) * 0.5;
-                let sys_sub = format!("Active: {}", settings.control_style.label());
-                for (i, (ic, title, sub)) in [
-                    (Icon::Gamepad, "Switch Control System", sys_sub.as_str()),
-                    (
-                        Icon::MicrosoftGrid,
-                        "Customize Controls",
-                        "Open layout & property studio",
-                    ),
-                ]
-                .into_iter()
-                .enumerate()
-                {
-                    let rx = cx + i as f32 * (half_w + 10.0);
-                    ui.rounded(rx, act_y, half_w, 44.0, 11.0, card_bg);
-                    ui.border(rx, act_y, half_w, 44.0, 11.0, border_c);
-                    ui.rounded(rx + 10.0, act_y + 9.0, 26.0, 26.0, 8.0, card_sel);
-                    ui.icon(ic, rx + 15.0, act_y + 14.0, 16.0, accent_hi);
-                    ui.text(Face::SemiBold, 10.4, rx + 42.0, act_y + 6.0, text_c, title);
-                    ui.text(Face::Regular, 8.6, rx + 42.0, act_y + 23.0, muted_c, sub);
-                }
             }
             1 => {
                 // 1. Control Mode Section
