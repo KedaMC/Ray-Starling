@@ -9,14 +9,14 @@ use super::layout::{Control, ControlStyle, Placement, PresetMeta, Settings};
 use serde::Deserialize;
 
 /// Reference screen the position expressions are evaluated on (landscape phone), in pixels.
-const SCREEN_W: f32 = 2400.0;
-const SCREEN_H: f32 = 1080.0;
+pub(super) const SCREEN_W: f32 = 2400.0;
+pub(super) const SCREEN_H: f32 = 1080.0;
 /// Pixels per dp on the reference screen (xxhdpi-ish).
-const DENSITY: f32 = 2.75;
+pub(super) const DENSITY: f32 = 2.75;
 /// Pojav's `${margin}`: two dp.
 const MARGIN_DP: f32 = 2.0;
 /// GoyControl buttons carry at most this many simultaneous events.
-const MAX_EVENTS: usize = 3;
+pub(super) const MAX_EVENTS: usize = 3;
 
 #[derive(Deserialize, Default)]
 #[serde(default)]
@@ -239,8 +239,16 @@ fn placement_of(button: &PojavButton, scale: Option<f32>) -> Option<Placement> {
     p.button_color = button.bg_color as i32 as u32;
     p.stroke_color = button.stroke_color as i32 as u32;
     p.stroke_size = button.stroke_width;
-    let radius = if button.corner_radius.is_finite() {
-        button.corner_radius.clamp(0.0, 100.0)
+    apply_corner_radius(&mut p, button.corner_radius);
+    p.visible_in_game = button.display_in_game;
+    p.visible_in_menu = button.display_in_menu;
+    Some(p)
+}
+
+/// Sets the button shape from a corner radius in percent: square at 0, a circle or pill at 100.
+pub(super) fn apply_corner_radius(p: &mut Placement, radius: f32) {
+    let radius = if radius.is_finite() {
+        radius.clamp(0.0, 100.0)
     } else {
         0.0
     };
@@ -251,9 +259,6 @@ fn placement_of(button: &PojavButton, scale: Option<f32>) -> Option<Placement> {
     };
     p.roundness = radius / 2.0;
     p.stroke_roundness = radius / 2.0;
-    p.visible_in_game = button.display_in_game;
-    p.visible_in_menu = button.display_in_menu;
-    Some(p)
 }
 
 /// GLFW key code to the key's name in the game's key table.

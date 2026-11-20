@@ -117,7 +117,8 @@ fn is_control_layout(path: &Path) -> bool {
     fs::metadata(path).is_ok_and(|m| m.len() <= LIMIT)
         && fs::read(path).is_ok_and(|b| {
             b.iter().find(|c| !c.is_ascii_whitespace()) == Some(&b'{')
-                && crate::android_controls::pojav_import::looks_like_pojav(&b)
+                && (crate::android_controls::pojav_import::looks_like_pojav(&b)
+                    || crate::android_controls::zalith2_import::looks_like_zalith2(&b))
         })
 }
 
@@ -251,10 +252,17 @@ pub fn install(path: &Path, name: &str, places: &Places) -> Result<Installed, St
             format!("Skin \"{title}\" added and put on")
         }
         Kind::ControlLayout => {
-            use crate::android_controls::{Settings, pojav_import};
+            use crate::android_controls::{Settings, pojav_import, zalith2_import};
             let bytes = fs::read(path).map_err(fail)?;
-            let layout =
-                pojav_import::convert(&bytes).map_err(|e| format!("{name} can't be added: {e}"))?;
+            let (layout, source) = if zalith2_import::looks_like_zalith2(&bytes) {
+                (zalith2_import::convert(&bytes), "ZalithLauncher 2")
+            } else {
+                (
+                    pojav_import::convert(&bytes),
+                    "PojavLauncher/ZalithLauncher",
+                )
+            };
+            let layout = layout.map_err(|e| format!("{name} can't be added: {e}"))?;
             let notes = match (layout.skipped, layout.dropped_events) {
                 (0, 0) => String::new(),
                 (s, 0) => format!(", {s} left out"),
@@ -265,7 +273,7 @@ pub fn install(path: &Path, name: &str, places: &Places) -> Result<Installed, St
                 layout.settings,
                 &places.game,
                 &title,
-                "Imported from PojavLauncher/ZalithLauncher",
+                &format!("Imported from {source}"),
             )
             .map_err(fail)?;
             format!(
@@ -666,6 +674,40 @@ mod tests {
         fs::write(&other, br#"{"layouts":[]}"#).unwrap();
         assert_eq!(classify(&other).0, Kind::Unknown);
         assert!(install(&other, "settings.json", &places).is_err());
+    }
+
+    #[test]
+    fn a_zalith2_control_layout_becomes_its_own_goycontrol_preset() {
+        let dir = scratch("controls2");
+        let places = Places {
+            game: dir.join("game"),
+            resources: dir.join("private/resources"),
+        };
+        let layout = dir.join("Zalith Two.json");
+        fs::write(
+            &layout,
+            br#"{"info":{},"editorVersion":12,"layers":[{"name":"l","uuid":"u","hide":false,
+            "visibilityType":"always","normalButtons":[{"text":{"default":"Jump","matchQueue":[]},
+            "uuid":"b","position":{"x":5000,"y":5000},"buttonSize":{"type":"dp","widthDp":50.0,
+            "heightDp":50.0},"visibilityType":"always","isSwipple":false,"isPenetrable":false,
+            "isToggleable":false,"clickEvents":[{"type":"key","key":"GLFW_KEY_SPACE"}]}]}]}"#,
+        )
+        .unwrap();
+        assert_eq!(classify(&layout).0, Kind::ControlLayout);
+        let done = install(&layout, "Zalith Two.json", &places).unwrap();
+        assert_eq!(done.kind, Kind::ControlLayout);
+        let presets = crate::android_controls::Settings::list_presets(
+            &places.game,
+            crate::android_controls::ControlStyle::GoyControl,
+        );
+        let meta = presets.iter().find(|p| p.name == "Zalith Two").unwrap();
+        assert!(meta.description.contains("ZalithLauncher 2"));
+        let loaded = crate::android_controls::Settings::load_preset(
+            &places.game,
+            crate::android_controls::ControlStyle::GoyControl,
+            &meta.id,
+        );
+        assert_eq!(loaded.custom_buttons[0].key, "key.keyboard.space");
     }
 
     #[test]
