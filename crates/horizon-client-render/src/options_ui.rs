@@ -9400,7 +9400,7 @@ mod tests {
         // Credits & Attribution (WinScreen's credits).
         let main = pushes(&mut ui);
         assert_eq!(
-            &main[main.len() - 3..],
+            &main[main.len() - 2..],
             [Page::Horizon, Page::Credits]
         );
         ui.push(Page::Horizon);
