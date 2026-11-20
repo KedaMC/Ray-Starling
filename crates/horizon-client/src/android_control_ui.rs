@@ -2460,6 +2460,9 @@ impl TouchUi {
                     let t = ((p[0] - sl_x) / sl_w).clamp(0.0, 1.0);
                     return Some(InGameMenuAction::SetVirtualMouseSpeed(0.25 + t * 2.75));
                 }
+                if inside([cx, body_y + 342.0, cw, 46.0]) {
+                    return Some(InGameMenuAction::PresetVisibilityAll);
+                }
             }
             1 => {
                 // Tab 1: Controls
@@ -2579,46 +2582,14 @@ impl TouchUi {
                 }
             }
             _ => {
-                // Tab 3: Advanced & Quick Actions
-                let row_h = 46.0;
-                let step = 54.0;
-                if inside([cx, body_y + 18.0, cw, row_h]) {
-                    return Some(if p[0] < cx + cw * 0.5 {
-                        InGameMenuAction::ToggleUiVibrate
-                    } else {
-                        InGameMenuAction::ToggleVibrate
-                    });
-                }
-                if inside([cx, body_y + 18.0 + step, cw, row_h]) {
-                    return Some(InGameMenuAction::PresetVisibilityAll);
-                }
-                let ky = body_y + 144.0;
-                let kw = (cw - 25.0) / 6.0;
-                let quick = [
-                    KeyCode::F1,
-                    KeyCode::F3,
-                    KeyCode::F5,
-                    KeyCode::KeyE,
-                    KeyCode::KeyT,
-                ];
-                for (i, key) in quick.iter().enumerate() {
-                    let rx = cx + i as f32 * (kw + 5.0);
-                    if inside([rx, ky, kw, 36.0]) {
-                        self.floating_menu = false;
-                        return Some(InGameMenuAction::TriggerKey(*key));
-                    }
-                }
-                if inside([cx + 5.0 * (kw + 5.0), ky, kw, 36.0]) {
-                    self.floating_menu = false;
-                    return Some(InGameMenuAction::OpenKeyboard);
-                }
-                let send_y = body_y + 190.0;
+                // Tab 4: Advanced & Quick Actions
+                let send_y = body_y + 18.0;
                 if inside([cx, send_y, cw, 40.0]) {
                     self.custom_input_picker =
                         crate::android_controls::PickerStep::AskInputType { event_slot: 0 };
                     return Some(InGameMenuAction::Close);
                 }
-                let sys_y = body_y + 238.0;
+                let sys_y = body_y + 66.0;
                 let half = (cw - 10.0) * 0.5;
                 if inside([cx, sys_y, half, 38.0]) {
                     self.floating_menu = false;
@@ -2863,11 +2834,11 @@ impl TouchUi {
         // Scrollable Right Content Panel with scissor clip and tab transition slide
         let tab_slide = (1.0 - tab_ease) * 14.0;
         let content_height = match self.hub_tab {
-            0 => 342.0,
+            0 => 400.0,
             1 => 376.0,
             2 => 470.0,
             3 => 296.0,
-            _ => 286.0,
+            _ => 120.0,
         };
         let max_scroll = (content_height - body_h).max(0.0);
         self.hub_max_scroll.set(max_scroll);
@@ -3113,6 +3084,14 @@ impl TouchUi {
                 );
                 ui.border(spd_thumb_x - 7.0, spd_sl_y - 4.0, 14.0, 14.0, 7.0, text_c);
 
+                draw_toggle_row(
+                    &mut ui,
+                    body_y + 342.0,
+                    "Apply Standard Menu Visibility",
+                    "Reset in-game vs in-menu visibility flags for active system",
+                    None,
+                    None,
+                );
             }
             1 => {
                 // 1. Control Mode Section
@@ -3640,87 +3619,16 @@ impl TouchUi {
                 );
             }
             _ => {
-                // Tab 3: Advanced & Quick Actions
+                // Tab 4: Advanced & Quick Actions
                 ui.text(
                     Face::SemiBold,
                     10.2,
                     cx,
                     body_y,
                     muted_c,
-                    "FEEDBACK, GAMEPLAY & SHORTCUTS",
-                );
-                let step = 54.0;
-                let feedback_width = (cw - 8.0) * 0.5;
-                ui.rounded(cx, body_y + 18.0, feedback_width, 46.0, 8.0, card_bg);
-                ui.rounded(
-                    cx + feedback_width + 8.0,
-                    body_y + 18.0,
-                    feedback_width,
-                    46.0,
-                    8.0,
-                    card_bg,
-                );
-                ui.centered_fit(
-                    Face::SemiBold,
-                    11.0,
-                    [cx, body_y + 18.0, feedback_width, 46.0],
-                    text_c,
-                    if settings.ui_vibrate {
-                        "UI vibration: ON"
-                    } else {
-                        "UI vibration: OFF"
-                    },
-                );
-                ui.centered_fit(
-                    Face::SemiBold,
-                    11.0,
-                    [
-                        cx + feedback_width + 8.0,
-                        body_y + 18.0,
-                        feedback_width,
-                        46.0,
-                    ],
-                    text_c,
-                    if settings.vibrate {
-                        "Gameplay vibration: ON"
-                    } else {
-                        "Gameplay vibration: OFF"
-                    },
-                );
-                draw_toggle_row(
-                    &mut ui,
-                    body_y + 18.0 + step,
-                    "Apply Standard Menu Visibility",
-                    "Reset in-game vs in-menu visibility flags for active system",
-                    None,
-                    None,
-                );
-                ui.text(
-                    Face::SemiBold,
-                    10.0,
-                    cx,
-                    body_y + 128.0,
-                    muted_c,
                     "QUICK DESKTOP KEYS & CUSTOM INPUT",
                 );
-                let ky = body_y + 144.0;
-                let kw = (cw - 25.0) / 6.0;
-                for (i, lbl) in ["F1", "F3", "F5", "Inv", "Chat", "Keys"]
-                    .into_iter()
-                    .enumerate()
-                {
-                    let rx = cx + i as f32 * (kw + 5.0);
-                    ui.rounded(rx, ky, kw, 36.0, 9.0, card_bg);
-                    ui.border(rx, ky, kw, 36.0, 9.0, border_c);
-                    ui.centered_fit(
-                        Face::SemiBold,
-                        10.5,
-                        [rx + 2.0, ky, kw - 4.0, 36.0],
-                        text_c,
-                        lbl,
-                    );
-                }
-                let send_y = body_y + 190.0;
+                let send_y = body_y + 18.0;
                 ui.rounded(cx, send_y, cw, 40.0, 10.0, card_sel);
                 ui.border(cx, send_y, cw, 40.0, 10.0, accent);
                 ui.icon(Icon::Gamepad, cx + 12.0, send_y + 11.0, 18.0, accent_hi);
@@ -3749,7 +3657,7 @@ impl TouchUi {
                     "›",
                 );
 
-                let sys_y = body_y + 238.0;
+                let sys_y = body_y + 66.0;
                 let half = (cw - 10.0) * 0.5;
                 ui.rounded(
                     cx,
