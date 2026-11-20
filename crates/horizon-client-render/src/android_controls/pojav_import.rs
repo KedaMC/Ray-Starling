@@ -142,14 +142,20 @@ pub fn convert(bytes: &[u8]) -> Result<Imported, String> {
         button.layouts = [placement; 3];
         buttons.push(button);
     }
-    if let Some(stick) = layout.joysticks.first() {
-        if let Some(mut placement) = placement_of(&stick.base, scale) {
-            placement.use_goy_style = true;
-            for row in &mut settings.layouts {
-                row[Control::Move as usize] = placement;
-            }
+    // The layout decides whether there is a joystick: without one, GoyControl's own is hidden
+    // (1 = shown, 2 = hidden in `button_visibility`), as the buttons are all the player has.
+    let stick = layout
+        .joysticks
+        .first()
+        .and_then(|stick| Some((stick, placement_of(&stick.base, scale)?)));
+    if let Some((stick, mut placement)) = stick {
+        placement.use_goy_style = true;
+        for row in &mut settings.layouts {
+            row[Control::Move as usize] = placement;
         }
         settings.dynamic_joystick = stick.absolute;
+    } else {
+        settings.button_visibility[Control::Move as usize] = 2;
     }
     let count = buttons.len();
     settings.custom_buttons = buttons;
@@ -591,6 +597,16 @@ mod tests {
         let p = out.settings.layouts[0][Control::Move as usize];
         assert!((p.center[0] - (100.0 + 68.75) / 2400.0).abs() < 1e-4);
         assert!(out.settings.dynamic_joystick);
+        assert!(out.settings.visible(Control::Move));
+    }
+
+    #[test]
+    fn without_a_joystick_the_default_one_is_hidden() {
+        let out = convert(&layout(&[button("JUMP", "0", "0", "[32]")])).unwrap();
+        assert!(!out.settings.visible(Control::Move));
+        // A joystick whose position cannot be evaluated is no joystick either.
+        let json = br#"{"mControlDataList":[],"mJoystickDataList":[{"dynamicX":"${nope}","dynamicY":"0"}]}"#;
+        assert!(!convert(json).unwrap().settings.visible(Control::Move));
     }
 
     #[test]
