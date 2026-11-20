@@ -1699,7 +1699,7 @@ impl TouchUi {
         (next_open, next_tab)
     }
 
-    /// Handles touch events for the draggable Floating Menu Button and the redesigned Horizon Control Hub.
+    /// Handles touch events for the draggable Floating Menu Button and the redesigned Starling Control Hub.
     pub fn floating_menu_touch(
         &mut self,
         b: &mut HudBatch,
@@ -2251,7 +2251,7 @@ impl TouchUi {
             return Some(InGameMenuAction::Close);
         }
 
-        // 3. Main Horizon Control Hub Dialog
+        // 3. Main Starling Control Hub Dialog
         if phase == TouchPhase::Started {
             if !inside([dx, dy, dw, dh]) || inside([dx + dw - 76.0, dy + 10.0, 64.0, 30.0]) {
                 self.floating_menu = false;
@@ -2649,7 +2649,7 @@ impl TouchUi {
     }
 
     /// Draws the Floating Menu Button (MCPE stone-slate `H` button vs GoyControl `=` bubble) and
-    /// the redesigned Horizon Control Hub with smooth motion, generous spacing, scrollable content pane,
+    /// the redesigned Starling Control Hub with smooth motion, generous spacing, scrollable content pane,
     /// and authoritative Virtual Mouse & gameplay settings.
     pub fn draw_floating_menu(
         &self,
@@ -2812,7 +2812,7 @@ impl TouchUi {
             dx + 52.0,
             dy + 8.0,
             text_c,
-            "Horizon Control Hub",
+            "Starling Control Hub",
         );
         ui.text(
             Face::Regular,

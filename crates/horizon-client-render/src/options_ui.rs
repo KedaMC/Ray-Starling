@@ -4447,11 +4447,9 @@ impl OptionsUi {
                         (!self.split_guest).then_some(Page::Packs),
                     ),
                     ("options.accessibility", Some(Page::Accessibility)),
-                    // Vanilla's Telemetry Data and Credits slots: Horizon's
-                    // settings and its mods, as a mod adds its button here.
+                    // Vanilla's Telemetry Data slot: Starling's settings. Mods live under it.
                     // Credits & Attribution (WinScreen's credits) follows them.
                     ("horizon.pages.open.horizon_settings", Some(Page::Horizon)),
-                    ("horizon.pages.open.mods", Some(Page::Mods)),
                     ("options.credits_and_attribution", Some(Page::Credits)),
                 ];
                 let entries = with_diagnostics(entries);
@@ -9398,12 +9396,12 @@ mod tests {
                 })
                 .collect()
         };
-        // Vanilla's Options buttons, Horizon's two in the Telemetry and Credits slots, then
+        // Vanilla's Options buttons, Starling's settings in the Telemetry slot, then
         // Credits & Attribution (WinScreen's credits).
         let main = pushes(&mut ui);
         assert_eq!(
             &main[main.len() - 3..],
-            [Page::Horizon, Page::Mods, Page::Credits]
+            [Page::Horizon, Page::Credits]
         );
         ui.push(Page::Horizon);
         assert_eq!(
