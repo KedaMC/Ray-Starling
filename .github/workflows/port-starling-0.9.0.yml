@@ -111,22 +111,22 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
-          rustup toolchain install stable --profile minimal --component rustfmt --component clippy
+          bash tools/ci/rustup_install.sh --profile minimal
 
       - name: Format and lint
         env:
           HORIZON_TELEMETRY_URL: "off"
         run: |
-          cargo +stable fmt --all -- --check
-          cargo +stable clippy --workspace --all-targets -- -D warnings
-          cargo +stable clippy -p horizon-client --all-targets --no-default-features -- -D warnings
+          cargo fmt --all -- --check
+          cargo clippy --workspace --all-targets -- -D warnings
+          cargo clippy -p horizon-client --all-targets --no-default-features -- -D warnings
 
       - name: Test Rust workspace
         env:
           HORIZON_TELEMETRY_URL: "off"
         run: |
-          cargo +stable test --workspace --lib --bins --tests
-          cargo +stable test --workspace --doc
+          cargo test --workspace --lib --bins --tests
+          cargo test --workspace --doc
 
       - name: Create exactly one integration commit and push Ray-Starling
         env:
