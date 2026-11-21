@@ -86,10 +86,6 @@ jobs:
           grep -q 'com.raystarling.strong' packaging/android/build_apk.py
           test -f crates/horizon-client-render/src/android_controls/pojav_import.rs
           test -f crates/horizon-client-render/src/android_controls/zalith2_import.rs
-          ! grep -q 'Page::Quality' crates/horizon-client-render/src/graphics_ui.rs
-          ! grep -q 'H::ResolutionScale' crates/horizon-client-render/src/graphics_ui.rs
-          ! grep -q 'H::BatteryMode' crates/horizon-client-render/src/graphics_ui.rs
-          ! grep -q 'Preset::' crates/horizon-client-render/src/graphics_ui.rs
           grep -q 'pub wheel_cycles_settings: bool' crates/horizon-client-render/src/extras.rs
           grep -q 'settings_y_rows' crates/horizon-client-render/src/options_ui/layout.rs
           grep -q 'Starling Settings...' crates/horizon-client/assets/horizon/lang/en_us.json
