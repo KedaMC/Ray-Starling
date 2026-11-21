@@ -64,6 +64,65 @@ jobs:
           echo "Merged change summary:"
           git diff --cached --stat
 
+
+      - name: Restore Ray's centered Starling Settings entry in the 0.9 layout module
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path("crates/horizon-client-render/src/options_ui/layout.rs")
+          source = path.read_text(encoding="utf-8")
+          pattern = re.compile(
+              r"                let entries = \\[\\n"
+              r"                    // Everywhere for the layers and Main Hand;.*?"
+              r"                out\\.push\\(done\\(h - 27\\.0\\)\\);\\n",
+              re.DOTALL,
+          )
+          replacement = """                // Starling Settings sits centered above the vanilla Options grid.
+                let settings_key = "horizon.pages.open.horizon_settings";
+                let settings_y_rows = [
+                    ("options.skinCustomisation", Some(Page::Skin)),
+                    ("options.sounds", Some(Page::Sound)),
+                    ("options.video", Some(Page::Video)),
+                    ("options.controls", Some(Page::Controls)),
+                    (
+                        "options.language",
+                        (!self.split_guest).then_some(Page::Language),
+                    ),
+                    ("options.chat", Some(Page::Chat)),
+                    (
+                        "options.resourcepack",
+                        (!self.split_guest).then_some(Page::Packs),
+                    ),
+                    ("options.accessibility", Some(Page::Accessibility)),
+                    ("options.credits_and_attribution", Some(Page::Credits)),
+                ];
+                let entries = with_diagnostics(settings_y_rows);
+                let rows = 1.0 + entries.len().div_ceil(2) as f32;
+                let gy = (61.0 + 30.0f32).min(h - 33.0 - rows * 24.0);
+                out.push(button(
+                    cx - 75.0,
+                    gy,
+                    150.0,
+                    tr(settings_key),
+                    Act::Push(Page::Horizon),
+                ));
+                for (i, (key, page)) in entries.iter().enumerate() {
+                    let x = cx - 158.0 + 4.0 + (i % 2) as f32 * 158.0;
+                    let y = gy + 24.0 + (i / 2) as f32 * 24.0;
+                    let b = button(x, y, 150.0, tr(key), page.map_or(Act::None, Act::Push));
+                    out.push(if page.is_some() { b } else { inactive(b) });
+                }
+                out.push(done(h - 27.0));
+"""
+          source, count = pattern.subn(replacement, source, count=1)
+          if count != 1:
+              raise SystemExit(f"Expected one upstream Main options-grid block, found {count}")
+          path.write_text(source, encoding="utf-8")
+          PY
+
       - name: Verify Ray-specific behavior survived
         shell: bash
         run: |
@@ -75,7 +134,9 @@ jobs:
           ! grep -q 'H::ResolutionScale' crates/horizon-client-render/src/graphics_ui.rs
           ! grep -q 'H::BatteryMode' crates/horizon-client-render/src/graphics_ui.rs
           ! grep -q 'Preset::' crates/horizon-client-render/src/graphics_ui.rs
-          grep -q 'settings_y_rows' crates/horizon-client-render/src/options_ui.rs
+          ! grep -q 'wheel_cycles_settings' crates/horizon-client-render/src/extras.rs
+          grep -q 'settings_y_rows' crates/horizon-client-render/src/options_ui/layout.rs
+          grep -q 'Starling Settings...' crates/horizon-client/assets/horizon/lang/en_us.json
           grep -q 'VERSION_NAME = "0.9.0"' packaging/android/build_apk.py
           echo "Ray package, importers and graphics/settings layout checks passed."
 
