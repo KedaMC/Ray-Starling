@@ -35,7 +35,6 @@ impl Page {
     pub fn name(self) -> &'static str {
         match self {
             Page::General => "General",
-            Page::Quality => "Quality",
             Page::Performance => "Performance",
             Page::Advanced => "Advanced",
             Page::Hdr => "HDR",
@@ -2233,7 +2232,7 @@ mod tests {
             assert!(items.contains(&item), "{item:?} should be on General");
         }
         assert!(lines.iter().all(|line| line.page == Page::General));
-        assert!(!items.contains(&Item::Horizon(H::ResolutionScale)));
+        assert!(!lines.iter().any(|line| line.setting.is_some_and(|row| row.item.label(&s).plain().starts_with("Resolution Scale:"))));
     }
 
     #[test]
@@ -2923,7 +2922,6 @@ mod tests {
             H::ChunkUpdates,
             H::UploadBudget,
             H::Workers,
-            H::ResolutionScale,
             H::HdrPaperWhite,
             H::HdrPeak,
             H::HdrBlackLevel,
