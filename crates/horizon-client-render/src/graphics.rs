@@ -625,10 +625,6 @@ pub struct Graphics {
     pub hdr_ui_brightness: u32,
     /// A vanilla key name (`HDR_KEY`): opens HDR's settings from the game. Unbound by default.
     pub hdr_key: String,
-    /// Battery mode: at most 60 frames per second in a world and 30 in menus
-    /// or behind other windows, and half the worker threads. Off by default;
-    /// it changes when frames are drawn, never what they show or the ticks.
-    pub battery: bool,
     /// Reuse the shader pack's last shadow map when sun, view, scene revision and
     /// pack uniforms still match. Off by default: vanilla loaders redraw every frame
     /// (or every `shadowInterval`), and a hit with a stale key shows old shadows.
@@ -735,7 +731,6 @@ impl Default for Graphics {
             hdr_black_level: 0,
             hdr_ui_brightness: 100,
             hdr_key: "key.keyboard.unknown".into(),
-            battery: false,
             shadow_cache: false,
             api: GraphicsApi::Auto,
             translucent_batching: true,
@@ -887,7 +882,6 @@ impl Graphics {
                     g.hdr_ui_brightness = number(g.hdr_ui_brightness).clamp(25, 100)
                 }
                 "hdrKey" if value.starts_with("key.") => g.hdr_key = value.to_owned(),
-                "batteryMode" => g.battery = flag(g.battery),
                 "shadowCache" => g.shadow_cache = flag(g.shadow_cache),
                 "batchTranslucent" => g.translucent_batching = flag(g.translucent_batching),
                 "graphicsApi" => g.api = GraphicsApi::from_name(value).unwrap_or_default(),
@@ -912,7 +906,7 @@ impl Graphics {
     }
     pub fn serialize(&self) -> String {
         let mut text = format!(
-            "preset:{}\nlodDistance:{}\nfarDetail:{}\ncaveCulling:{}\nentityCulling:{}\nleafCulling:{}\nblockEntityCacheShulkerBoxes:{}\nblockEntityCacheSigns:{}\nblockEntityCacheDecoratedPots:{}\nblockEntityCacheBells:{}\nblockEntityCacheChests:{}\nblockEntityCacheBanners:{}\nblockEntityCacheCopperGolemStatues:{}\nchunkUpdates:{}\nuploadBudgetKiB:{}\ntextureBudgetMiB:{}\nsky:{}\nfog:{}\nweather:{}\nanimatedTextures:{}\nditherCutoutMips:{}\npresentMode:{}\nframePacing:{}\nworkers:{}\noverlay:{}\nresolutionScale:{}\nfxaa:{}\ntaa:{}\nupscaling:{}\nscreenshotQuality:{}\nframeGeneration:{}\nhdr:{}\nhdrPaperWhite:{}\nhdrPeak:{}\nhdrBlackLevel:{}\nhdrUiBrightness:{}\nhdrKey:{}\nbatteryMode:{}\nshadowCache:{}\ngraphicsApi:{}\npickedShaderPack:{}\nshadersProfile:{}\nbatchTranslucent:{}\n",
+            "preset:{}\nlodDistance:{}\nfarDetail:{}\ncaveCulling:{}\nentityCulling:{}\nleafCulling:{}\nblockEntityCacheShulkerBoxes:{}\nblockEntityCacheSigns:{}\nblockEntityCacheDecoratedPots:{}\nblockEntityCacheBells:{}\nblockEntityCacheChests:{}\nblockEntityCacheBanners:{}\nblockEntityCacheCopperGolemStatues:{}\nchunkUpdates:{}\nuploadBudgetKiB:{}\ntextureBudgetMiB:{}\nsky:{}\nfog:{}\nweather:{}\nanimatedTextures:{}\nditherCutoutMips:{}\npresentMode:{}\nframePacing:{}\nworkers:{}\noverlay:{}\nresolutionScale:{}\nfxaa:{}\ntaa:{}\nupscaling:{}\nscreenshotQuality:{}\nframeGeneration:{}\nhdr:{}\nhdrPaperWhite:{}\nhdrPeak:{}\nhdrBlackLevel:{}\nhdrUiBrightness:{}\nhdrKey:{}\nshadowCache:{}\ngraphicsApi:{}\npickedShaderPack:{}\nshadersProfile:{}\nbatchTranslucent:{}\n",
             self.preset.name(),
             self.lod_distance,
             self.far_detail.name(),
@@ -958,7 +952,6 @@ impl Graphics {
             self.hdr_black_level,
             self.hdr_ui_brightness,
             self.hdr_key,
-            bool_text(self.battery),
             bool_text(self.shadow_cache),
             self.api.name(),
             self.shader_pack,
@@ -1021,18 +1014,7 @@ impl Graphics {
         // a hot phone slows every core down.
         let spare = if cfg!(target_os = "android") { 2 } else { 1 };
         let auto = horizon_threads::worker_count().saturating_sub(spare).max(1);
-        if self.battery { auto.div_ceil(2) } else { auto }
-    }
-    /// The frame cap battery mode adds: 60 in a world, 30 in menus without a
-    /// world or while another window has focus.
-    pub fn battery_limit(&self, limit: i32, in_world: bool, focused: bool) -> i32 {
-        if !self.battery {
-            limit
-        } else if in_world && focused {
-            limit.min(60)
-        } else {
-            limit.min(30)
-        }
+        auto
     }
 }
 
@@ -1213,7 +1195,6 @@ mod tests {
             hdr_black_level: 12,
             hdr_ui_brightness: 60,
             hdr_key: "key.keyboard.h".into(),
-            battery: true,
             shadow_cache: true,
             api: GraphicsApi::Dx12,
             translucent_batching: false,
@@ -1468,15 +1449,4 @@ mod tests {
         assert_eq!(manual.worker_threads(), 3);
     }
 
-    #[test]
-    fn battery_mode_only_lowers_the_frame_cap() {
-        let mut g = Graphics::default();
-        assert_eq!(g.battery_limit(260, true, true), 260);
-        g.battery = true;
-        assert_eq!(g.battery_limit(260, true, true), 60);
-        assert_eq!(g.battery_limit(30, true, true), 30);
-        assert_eq!(g.battery_limit(260, false, true), 30);
-        assert_eq!(g.battery_limit(260, true, false), 30);
-        assert_eq!(g.battery_limit(10, true, false), 10);
-    }
 }
