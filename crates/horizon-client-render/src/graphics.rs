@@ -48,50 +48,6 @@ pub fn reported() -> Option<Reported> {
     })
 }
 
-/// Simple-level presets. `Custom` leaves every option as the player set it.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
-pub enum Preset {
-    Performance,
-    Balanced,
-    Quality,
-    Ultra,
-    #[default]
-    Custom,
-}
-impl Preset {
-    pub const ALL: [Preset; 5] = [
-        Preset::Performance,
-        Preset::Balanced,
-        Preset::Quality,
-        Preset::Ultra,
-        Preset::Custom,
-    ];
-    pub fn name(self) -> &'static str {
-        match self {
-            Preset::Performance => "performance",
-            Preset::Balanced => "balanced",
-            Preset::Quality => "quality",
-            Preset::Ultra => "ultra",
-            Preset::Custom => "custom",
-        }
-    }
-    pub fn label(self) -> &'static str {
-        match self {
-            Preset::Performance => "Performance",
-            Preset::Balanced => "Balanced",
-            Preset::Quality => "Quality",
-            Preset::Ultra => "Ultra",
-            Preset::Custom => "Custom",
-        }
-    }
-    fn parse(s: &str) -> Self {
-        Self::ALL
-            .into_iter()
-            .find(|p| p.name() == s)
-            .unwrap_or_default()
-    }
-}
-
 /// Entity occlusion strategy. The synchronous mode preserves the original
 /// same-frame CPU test; asynchronous results only hide a mesh when their
 /// camera, bounds and occluder evidence still match.
@@ -547,7 +503,6 @@ impl Graphics {
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct Graphics {
-    pub preset: Preset,
     /// Distant surface terrain range, in chunks; 0 disables LODs.
     pub lod_distance: u32,
     /// How finely far terrain is drawn; Full unless the player picks Reduced.
@@ -692,7 +647,6 @@ impl Graphics {
 impl Default for Graphics {
     fn default() -> Self {
         Self {
-            preset: Preset::Custom,
             lod_distance: 0,
             far_detail: FarDetail::Full,
             blue_map: crate::bluemap::Settings::default(),
@@ -798,7 +752,6 @@ impl Graphics {
             };
             let number = |d: u32| value.parse().unwrap_or(d);
             match key.trim() {
-                "preset" => g.preset = Preset::parse(value),
                 "lodDistance" => {
                     g.lod_distance = number(g.lod_distance).min(crate::lod::MAX_CHUNKS)
                 }
@@ -906,8 +859,7 @@ impl Graphics {
     }
     pub fn serialize(&self) -> String {
         let mut text = format!(
-            "preset:{}\nlodDistance:{}\nfarDetail:{}\ncaveCulling:{}\nentityCulling:{}\nleafCulling:{}\nblockEntityCacheShulkerBoxes:{}\nblockEntityCacheSigns:{}\nblockEntityCacheDecoratedPots:{}\nblockEntityCacheBells:{}\nblockEntityCacheChests:{}\nblockEntityCacheBanners:{}\nblockEntityCacheCopperGolemStatues:{}\nchunkUpdates:{}\nuploadBudgetKiB:{}\ntextureBudgetMiB:{}\nsky:{}\nfog:{}\nweather:{}\nanimatedTextures:{}\nditherCutoutMips:{}\npresentMode:{}\nframePacing:{}\nworkers:{}\noverlay:{}\nresolutionScale:{}\nfxaa:{}\ntaa:{}\nupscaling:{}\nscreenshotQuality:{}\nframeGeneration:{}\nhdr:{}\nhdrPaperWhite:{}\nhdrPeak:{}\nhdrBlackLevel:{}\nhdrUiBrightness:{}\nhdrKey:{}\nshadowCache:{}\ngraphicsApi:{}\npickedShaderPack:{}\nshadersProfile:{}\nbatchTranslucent:{}\n",
-            self.preset.name(),
+            "lodDistance:{}\nfarDetail:{}\ncaveCulling:{}\nentityCulling:{}\nleafCulling:{}\nblockEntityCacheShulkerBoxes:{}\nblockEntityCacheSigns:{}\nblockEntityCacheDecoratedPots:{}\nblockEntityCacheBells:{}\nblockEntityCacheChests:{}\nblockEntityCacheBanners:{}\nblockEntityCacheCopperGolemStatues:{}\nchunkUpdates:{}\nuploadBudgetKiB:{}\ntextureBudgetMiB:{}\nsky:{}\nfog:{}\nweather:{}\nanimatedTextures:{}\nditherCutoutMips:{}\npresentMode:{}\nframePacing:{}\nworkers:{}\noverlay:{}\nresolutionScale:{}\nfxaa:{}\ntaa:{}\nupscaling:{}\nscreenshotQuality:{}\nframeGeneration:{}\nhdr:{}\nhdrPaperWhite:{}\nhdrPeak:{}\nhdrBlackLevel:{}\nhdrUiBrightness:{}\nhdrKey:{}\nshadowCache:{}\ngraphicsApi:{}\npickedShaderPack:{}\nshadersProfile:{}\nbatchTranslucent:{}\n",
             self.lod_distance,
             self.far_detail.name(),
             bool_text(self.cave_culling),
@@ -1018,38 +970,6 @@ impl Graphics {
     }
 }
 
-/// A preset's values for vanilla's options and Horizon's own.
-pub fn apply_preset(preset: Preset, s: &mut crate::settings::Settings) {
-    let (rd, sim, clouds, particles, shadows, blend, mipmaps, entity, leaves, weather_r) =
-        match preset {
-            Preset::Performance => (8, 6, "false", 2, false, 0, 0, 0.5, false, 3),
-            Preset::Balanced => (12, 8, "fast", 1, true, 1, 2, 0.75, true, 5),
-            Preset::Quality => (16, 12, "true", 0, true, 2, 4, 1.0, true, 10),
-            Preset::Ultra => (24, 12, "true", 0, true, 3, 4, 1.5, true, 10),
-            Preset::Custom => return,
-        };
-    s.render_distance = rd;
-    s.simulation_distance = sim;
-    s.clouds = clouds.into();
-    s.particles = particles;
-    s.entity_shadows = shadows;
-    s.biome_blend = blend;
-    s.mipmap_levels = mipmaps;
-    s.entity_distance = entity;
-    s.cutout_leaves = leaves;
-    s.weather_radius = weather_r;
-    s.graphics_preset = "custom".into();
-    let g = &mut s.horizon;
-    g.preset = preset;
-    g.cave_culling = true;
-    g.animated_textures = true;
-    g.chunk_updates = 0;
-    g.upload_budget_kib = 0;
-    g.sky = true;
-    g.fog = true;
-    g.weather = true;
-}
-
 /// A phone's first start: settings for its tier instead of the desktop's (measured on a
 /// Snapdragon 8 Gen 2 at 3200x1440; slower tiers scaled down from it).
 ///
@@ -1084,7 +1004,6 @@ pub fn apply_mobile_defaults(tier: crate::system_stats::Tier, s: &mut crate::set
     s.auto_jump = true;
     s.graphics_preset = "custom".into();
     let g = &mut s.horizon;
-    g.preset = Preset::Custom;
     g.resolution_scale = match tier {
         Tier::High => 100,
         Tier::Mid => 85,
@@ -1152,7 +1071,6 @@ mod tests {
     #[test]
     fn round_trips() {
         let g = Graphics {
-            preset: Preset::Balanced,
             lod_distance: 256,
             far_detail: FarDetail::Reduced,
             blue_map: crate::bluemap::Settings {
@@ -1292,16 +1210,10 @@ mod tests {
     }
 
     #[test]
-    fn presets_keep_the_leaf_culling_choice() {
-        for mode in LeafCullingMode::ALL {
-            for preset in Preset::ALL {
-                let mut s = crate::settings::Settings::default();
-                s.horizon.leaf_culling = mode;
-                apply_preset(preset, &mut s);
-                assert_eq!(s.horizon.leaf_culling, mode, "{preset:?}");
-                assert_eq!(Graphics::parse(&s.horizon.serialize()), s.horizon);
-            }
-        }
+    fn legacy_preset_key_is_ignored() {
+        let g = Graphics::parse("preset:balanced\nlodDistance:128\n");
+        assert_eq!(g.lod_distance, 128);
+        assert!(!g.serialize().lines().any(|line| line.starts_with("preset:")));
     }
 
     #[test]
@@ -1414,27 +1326,6 @@ mod tests {
         );
         for text in ["farDetail:full\n", "farDetail:other\n", ""] {
             assert_eq!(Graphics::parse(text).far_detail, FarDetail::Full);
-        }
-        // No preset changes it.
-        for preset in Preset::ALL {
-            let mut s = crate::settings::Settings::default();
-            apply_preset(preset, &mut s);
-            assert_eq!(s.horizon.far_detail, FarDetail::Full, "{preset:?}");
-        }
-    }
-
-    #[test]
-    fn every_preset_keeps_the_animated_textures_on() {
-        // The Performance preset used to turn them off, which froze the fire,
-        // the water, the lava and the portals (#2064).
-        assert!(Graphics::default().animated_textures);
-        for preset in Preset::ALL {
-            let mut s = crate::settings::Settings::default();
-            apply_preset(preset, &mut s);
-            assert!(
-                s.horizon.animated_textures,
-                "{preset:?} turned the animated textures off"
-            );
         }
     }
 

@@ -6,7 +6,7 @@
 use crate::{
     graphics::{
         EntityCullingMode, FarDetail, FrameGeneration, GraphicsApi, LeafCullingMode, Overlay,
-        Pacing, PresentMode, Preset, Upscaling,
+        Pacing, PresentMode, Upscaling,
     },
     graphics_style::{self as style, Cost},
     hud::{HudAtlas, HudBatch},
@@ -877,7 +877,6 @@ impl Item {
             Item::Vanilla(o) => o.set_slider(s, v),
             Item::Horizon(h) => h.set_slider(s, v),
         }
-        self.touched(s);
     }
     pub fn cycle(self, s: &mut Settings, back: bool, framebuffer: [i32; 2]) {
         if !self.available() {
@@ -886,42 +885,6 @@ impl Item {
         match self {
             Item::Vanilla(o) => o.cycle(s, back, framebuffer),
             Item::Horizon(h) => h.cycle(s, back),
-        }
-        self.touched(s);
-    }
-    /// A preset no longer describes the settings once one of them changes.
-    fn touched(self, s: &mut Settings) {
-        let presetless = matches!(
-            self,
-            Item::Horizon(
-                H::BlueMapAutoDetect
-                    | H::BlueMapRadius
-                    | H::Overlay
-                    | H::ScreenshotQuality
-                    | H::Pacing
-                    | H::PresentMode
-                    | H::Workers
-                    | H::FrameGeneration
-                    | H::ShadowCache
-                    | H::GraphicsApi
-                    | H::TranslucentBatching
-            ) | Item::Vanilla(
-                Opt::GuiScale
-                    | Opt::Fullscreen
-                    | Opt::Vsync
-                    | Opt::MaxFps
-                    | Opt::Fov
-                    | Opt::Gamma
-                    | Opt::InactivityFps
-                    | Opt::ViewBobbing
-                    | Opt::ChunkFade
-                    | Opt::Vignette
-                    | Opt::Autosave
-                    | Opt::AttackIndicator
-            )
-        );
-        if !presetless {
-            s.horizon.preset = Preset::Custom;
         }
     }
     pub fn slider_steps(self) -> Option<u32> {
@@ -955,7 +918,6 @@ impl Item {
             }
         };
         self.set_slider(s, next_pos);
-        self.touched(s);
     }
 }
 
@@ -1803,7 +1765,7 @@ impl GraphicsUi {
         }) else {
             return Vec::new();
         };
-        // A disabled control does nothing: no sound, no preset change.
+        // A disabled control does nothing: no sound and no setting change.
         if item.blocked(s).is_some() {
             return Vec::new();
         }
@@ -2687,14 +2649,12 @@ mod tests {
         radius.cycle(&mut s, true, FB);
         radius.cycle(&mut s, true, FB);
         assert_eq!(radius.label(&s).plain(), "BlueMap Radius: 32 chunks");
-        assert_eq!(s.horizon.preset, Preset::Custom);
     }
 
 
     #[test]
-    fn screenshot_quality_cycles_1_2_4_8_and_keeps_the_preset() {
+    fn screenshot_quality_cycles_1_2_4_8() {
         let mut s = Settings::default();
-        s.horizon.preset = Preset::Performance;
         let mut seen = Vec::new();
         for _ in 0..4 {
             Item::Horizon(H::ScreenshotQuality).cycle(&mut s, false, [854, 480]);
@@ -2703,7 +2663,6 @@ mod tests {
         assert_eq!(seen, [2, 4, 8, 1]);
         Item::Horizon(H::ScreenshotQuality).cycle(&mut s, true, [854, 480]);
         assert_eq!(s.horizon.screenshot_quality, 8);
-        assert_eq!(s.horizon.preset, Preset::Performance);
     }
 
     #[test]
@@ -2748,13 +2707,6 @@ mod tests {
         let item = Item::Horizon(H::EntityCulling);
         assert_eq!(s.horizon.entity_culling, EntityCullingMode::Off);
         assert_eq!(item.label(&s).plain(), "Entity Culling: Off");
-        for mode in EntityCullingMode::ALL {
-            s.horizon.entity_culling = mode;
-            for preset in Preset::ALL {
-                crate::graphics::apply_preset(preset, &mut s);
-                assert_eq!(s.horizon.entity_culling, mode);
-            }
-        }
         s.horizon.entity_culling = EntityCullingMode::Off;
         let mut ui = GraphicsUi::default();
         let r = row(&mut ui, &s, item);
@@ -2762,19 +2714,17 @@ mod tests {
             EntityCullingMode::Synchronous,
             EntityCullingMode::Asynchronous,
         ] {
-            s.horizon.preset = Preset::Balanced;
             assert_eq!(
                 press(&mut ui, &mut s, (r[0] + 4.0, r[1] + 4.0)),
                 [Action::ButtonClick, Action::Changed]
             );
             assert_eq!(s.horizon.entity_culling, mode);
-            assert_eq!(s.horizon.preset, Preset::Custom);
         }
         assert_eq!(item.label(&s).plain(), "Entity Culling: Asynchronous");
     }
 
-    /// Translucent Batching: a switch on the Advanced page, on by default, no part of a
-    /// preset, and greyed out, reading Off, where the device can't batch.
+    /// Translucent Batching: a switch on the Advanced page, on by default, and greyed out,
+    /// reading Off, where the device can't batch.
     #[test]
     fn translucent_batching_is_an_advanced_switch_where_the_device_can() {
         let item = Item::Horizon(H::TranslucentBatching);
@@ -2789,7 +2739,6 @@ mod tests {
         }
         assert_eq!(page, Some(Page::Advanced));
         let mut s = Settings::default();
-        s.horizon.preset = Preset::Balanced;
         assert_eq!(item.switch(&s), Some(true));
         let mut ui = GraphicsUi::default();
         // Where the device can't, the saved On reads Off, and neither a click nor Enter
@@ -2804,7 +2753,7 @@ mod tests {
         let enter = ui.key_modifiers(&mut s, K::Enter, None, false, SIZE, FB);
         assert!(enter.0.is_empty());
         assert!(s.horizon.translucent_batching);
-        // Where it can, a click switches it and keeps the preset.
+        // Where it can, a click switches it.
         crate::graphics::offer_translucent_batching(true);
         assert_eq!(item.label(&s).plain(), "Translucent Batching: On");
         assert_eq!(
@@ -2813,15 +2762,6 @@ mod tests {
         );
         assert!(!s.horizon.translucent_batching);
         assert_eq!(item.label(&s).plain(), "Translucent Batching: Off");
-        assert_eq!(s.horizon.preset, Preset::Balanced);
-        // No preset sets it.
-        for on in [false, true] {
-            s.horizon.translucent_batching = on;
-            for preset in Preset::ALL {
-                crate::graphics::apply_preset(preset, &mut s);
-                assert_eq!(s.horizon.translucent_batching, on, "{preset:?}");
-            }
-        }
     }
 
     #[test]
@@ -2891,9 +2831,8 @@ mod tests {
             assert!(text.len() < 80, "{mode:?}: {text}");
         }
 
-        // A click cycles it and leaves the preset, as the other quality settings do.
+        // A click cycles the selected culling mode.
         let mut ui = GraphicsUi::default();
-        s.horizon.preset = Preset::Balanced;
         s.horizon.leaf_culling = LeafCullingMode::Off;
         let r = row(&mut ui, &s, item);
         assert_eq!(
@@ -2901,7 +2840,6 @@ mod tests {
             [Action::ButtonClick, Action::Changed]
         );
         assert_eq!(s.horizon.leaf_culling, LeafCullingMode::Solid);
-        assert_eq!(s.horizon.preset, Preset::Custom);
     }
 
     #[test]
