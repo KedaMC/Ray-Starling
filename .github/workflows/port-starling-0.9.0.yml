@@ -29,40 +29,43 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Fetch the exact upstream release and prepare a bounded merge base
+      - name: Build a coherent upstream-first integration tree
         shell: bash
         run: |
           set -euo pipefail
           BASE=5432370d573642041585c69b40fb045b27133488
           EXPECTED=ff303502a4f7982551a0e0d3622d9268efe9e829
+          RAY_HEAD="$(git rev-parse HEAD)"
           git fetch --depth=1 https://github.com/starling-client/starling.git refs/tags/v0.9.0:refs/tags/upstream-v0.9.0
-          ACTUAL="$(git rev-parse 'refs/tags/upstream-v0.9.0^{commit}')"
-          test "$ACTUAL" = "$EXPECTED"
+          UPSTREAM="$(git rev-parse 'refs/tags/upstream-v0.9.0^{commit}')"
+          test "$UPSTREAM" = "$EXPECTED"
           git cat-file -e "$BASE^{commit}"
-          test "$(git merge-base HEAD "$BASE")" = "$BASE"
+          git cat-file -e "$RAY_HEAD^{commit}"
           git config user.name "Ray Starling Integration"
           git config user.email "ray-starling-integration@users.noreply.github.com"
-          UPSTREAM_TREE="$(git rev-parse 'refs/tags/upstream-v0.9.0^{tree}')"
-          SYNTHETIC_UPSTREAM="$(printf '%s\n' 'Starling 0.9.0 snapshot (synthetic parent at shared base)' | git commit-tree "$UPSTREAM_TREE" -p "$BASE")"
-          echo "SYNTHETIC_UPSTREAM=$SYNTHETIC_UPSTREAM" >> "$GITHUB_ENV"
 
-      - name: Squash upstream 0.9.0 into Ray, preferring Ray on overlapping hunks
-        shell: bash
-        run: |
-          set -euo pipefail
-          git merge --squash -X ours "$SYNTHETIC_UPSTREAM"
-          unresolved="$(git diff --name-only --diff-filter=U)"
-          if [ -n "$unresolved" ]; then
-            echo "Unresolved merge paths:"
-            printf '%s\n' "$unresolved"
+          # Apply only Ray's actual delta (BASE..RAY_HEAD) on top of the complete
+          # 0.9.0 tree. This avoids retaining stale Ray files merely because an
+          # entire file changed upstream and then mixing incompatible APIs.
+          MERGE_OUTPUT="$(git merge-tree --write-tree --merge-base="$BASE" -X theirs "$UPSTREAM" "$RAY_HEAD")"
+          MERGED_TREE="$(printf '%s\n' "$MERGE_OUTPUT" | head -n 1)"
+          if ! git cat-file -e "$MERGED_TREE^{tree}" 2>/dev/null; then
+            echo "Could not produce the merged source tree:"
+            printf '%s\n' "$MERGE_OUTPUT"
             exit 1
           fi
-          if git diff --cached --quiet; then
-            echo "The upstream snapshot produced no changes."
+          if printf '%s\n' "$MERGE_OUTPUT" | grep -q '^CONFLICT '; then
+            echo "The upstream-first merge still has unresolved conflicts:"
+            printf '%s\n' "$MERGE_OUTPUT"
             exit 1
           fi
-          echo "Merged change summary:"
-          git diff --cached --stat
+
+          # Keep the eventual integration commit as a single child of Ray's
+          # current branch tip, so the final push remains a fast-forward.
+          git read-tree --reset -u "$MERGED_TREE"
+          git diff --check
+          echo "Upstream-first merged tree: $MERGED_TREE"
+          git status --short
 
 
       - name: Check out the port helper
