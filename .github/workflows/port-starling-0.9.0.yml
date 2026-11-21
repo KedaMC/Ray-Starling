@@ -113,6 +113,14 @@ jobs:
           sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
           bash tools/ci/rustup_install.sh --profile minimal
 
+      - name: Format the merged Rust tree and amend the single commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo fmt --all
+          git add -A
+          git commit --amend --no-edit
+
       - name: Format and lint
         env:
           HORIZON_TELEMETRY_URL: "off"
