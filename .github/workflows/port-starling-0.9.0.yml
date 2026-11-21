@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: ray-starling-0.9.0-port
+  group: ray-starling-0.9.0-port-upstream-first
   cancel-in-progress: false
 
 jobs:
