@@ -1,0 +1,114 @@
+name: Port Starling 0.9.0 into Ray
+
+on:
+  push:
+    branches:
+      - port/starling-0.9.0
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ray-starling-0.9.0-port
+  cancel-in-progress: false
+
+jobs:
+  port:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Check out Ray-Starling
+        uses: actions/checkout@v4
+        with:
+          ref: Ray-Starling
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fetch the exact upstream release and prepare a bounded merge base
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=5432370d573642041585c69b40fb045b27133488
+          EXPECTED=5ec035864e8c769758b0daee15ba985481c6b22a
+          git fetch --depth=1 https://github.com/starling-client/starling.git refs/tags/0.9.0:refs/tags/upstream-0.9.0
+          ACTUAL="$(git rev-parse 'refs/tags/upstream-0.9.0^{commit}')"
+          test "$ACTUAL" = "$EXPECTED"
+          git cat-file -e "$BASE^{commit}"
+          test "$(git merge-base HEAD "$BASE")" = "$BASE"
+          UPSTREAM_TREE="$(git rev-parse 'refs/tags/upstream-0.9.0^{tree}')"
+          SYNTHETIC_UPSTREAM="$(printf '%s\n' 'Starling 0.9.0 snapshot (synthetic parent at shared base)' | git commit-tree "$UPSTREAM_TREE" -p "$BASE")"
+          echo "SYNTHETIC_UPSTREAM=$SYNTHETIC_UPSTREAM" >> "$GITHUB_ENV"
+
+      - name: Squash upstream 0.9.0 into Ray, preferring Ray on overlapping hunks
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge --squash -X ours "$SYNTHETIC_UPSTREAM"
+          unresolved="$(git diff --name-only --diff-filter=U)"
+          if [ -n "$unresolved" ]; then
+            echo "Unresolved merge paths:"
+            printf '%s\n' "$unresolved"
+            exit 1
+          fi
+          if git diff --cached --quiet; then
+            echo "The upstream snapshot produced no changes."
+            exit 1
+          fi
+          echo "Merged change summary:"
+          git diff --cached --stat
+
+      - name: Verify Ray-specific behavior survived
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'com.raystarling.strong' packaging/android/build_apk.py
+          test -f crates/horizon-client-render/src/android_controls/pojav_import.rs
+          test -f crates/horizon-client-render/src/android_controls/zalith2_import.rs
+          ! grep -q 'Page::Quality' crates/horizon-client-render/src/graphics_ui.rs
+          ! grep -q 'H::ResolutionScale' crates/horizon-client-render/src/graphics_ui.rs
+          ! grep -q 'H::BatteryMode' crates/horizon-client-render/src/graphics_ui.rs
+          ! grep -q 'Preset::' crates/horizon-client-render/src/graphics_ui.rs
+          grep -q 'Ray' crates/horizon-client-render/src/options_ui.rs
+          echo "Ray package, importers and graphics/settings layout checks passed."
+
+      - name: Check public tree and Python tooling
+        run: |
+          python tools/check_public_tree.py
+          python -m unittest discover -s tests -v
+
+      - name: Install Rust toolchain and native headers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
+          rustup toolchain install stable --profile minimal --component rustfmt --component clippy
+
+      - name: Format and lint
+        env:
+          HORIZON_TELEMETRY_URL: "off"
+        run: |
+          cargo +stable fmt --all -- --check
+          cargo +stable clippy --workspace --all-targets -- -D warnings
+          cargo +stable clippy -p horizon-client --all-targets --no-default-features -- -D warnings
+
+      - name: Test Rust workspace
+        env:
+          HORIZON_TELEMETRY_URL: "off"
+        run: |
+          cargo +stable test --workspace --lib --bins --tests
+          cargo +stable test --workspace --doc
+
+      - name: Create exactly one integration commit and push Ray-Starling
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: port Starling 0.9.0 into Ray Starling"
+          git push origin HEAD:refs/heads/Ray-Starling
