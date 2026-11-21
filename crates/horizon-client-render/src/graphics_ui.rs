@@ -2299,7 +2299,7 @@ mod tests {
                 .is_some_and(|r| r.item == Item::Horizon(H::Fog))
         }));
         ui.search.set_value("hdr");
-        let [x, y, w, h] = cols.page(4);
+        let [x, y, w, h] = cols.page(3);
         press(&mut ui, &mut s, (x + w / 2.0, y + h / 2.0));
         assert_eq!(ui.current(&ui.lines(&s).0), Some(Page::Hdr));
         let [x, y, ..] = cols.clear();
