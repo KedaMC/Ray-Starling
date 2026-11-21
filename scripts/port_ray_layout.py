@@ -157,6 +157,110 @@ graphics = graphics[:tests_at] + tests
 graphics_path.write_text(graphics, encoding="utf-8")
 print("Restored Ray's merged General graphics page and hidden legacy controls.")
 
+
+# Ray's Discord Rich Presence switch remains a Horizon Settings option in 0.9.0.
+extras_path = Path("crates/horizon-client-render/src/extras.rs")
+extras = extras_path.read_text(encoding="utf-8")
+
+def replace_once(source, old, new, label):
+    count = source.count(old)
+    if count != 1:
+        raise SystemExit(f"Expected one {label}, found {count}")
+    return source.replace(old, new, 1)
+
+extras = replace_once(
+    extras,
+    "    pub repro_keys: bool,\n    /// Another controller can join P1's world",
+    "    pub repro_keys: bool,\n    /// Shows Playing Horizon on the player's Discord profile (on by default).\n    pub discord_presence: bool,\n    /// Another controller can join P1's world",
+    "Discord Presence field",
+)
+extras = replace_once(
+    extras,
+    "            repro_keys: false,\n            splitscreen: false,",
+    "            repro_keys: false,\n            discord_presence: true,\n            splitscreen: false,",
+    "Discord Presence default",
+)
+extras = replace_once(
+    extras,
+    '                "reproKeys" => e.repro_keys = flag(e.repro_keys),\n                "splitscreen" =>',
+    '                "reproKeys" => e.repro_keys = flag(e.repro_keys),\n                "discordPresence" => e.discord_presence = flag(e.discord_presence),\n                "splitscreen" =>',
+    "Discord Presence parser",
+)
+extras = replace_once(
+    extras,
+    r"reproKeys:{}\nsplitscreen:{}",
+    r"reproKeys:{}\ndiscordPresence:{}\nsplitscreen:{}",
+    "Discord Presence serialization key",
+)
+extras = replace_once(
+    extras,
+    "            bool_text(self.repro_keys),\n            bool_text(self.splitscreen),",
+    "            bool_text(self.repro_keys),\n            bool_text(self.discord_presence),\n            bool_text(self.splitscreen),",
+    "Discord Presence serialization value",
+)
+extras = replace_once(
+    extras,
+    "    ReproKeys,\n    /// On the Splitscreen settings page.",
+    "    ReproKeys,\n    /// On the Horizon Settings page.\n    DiscordPresence,\n    /// On the Splitscreen settings page.",
+    "Discord Presence item",
+)
+extras = replace_once(
+    extras,
+    '            Item::ReproKeys => "horizon.extras.repro_keys",',
+    '            Item::ReproKeys => "horizon.extras.repro_keys",\n            Item::DiscordPresence => "horizon.extras.discord_presence",',
+    "Discord Presence caption key",
+)
+extras = replace_once(
+    extras,
+    '            Item::ReproKeys => "horizon.extras.repro_keys.tooltip",',
+    '            Item::ReproKeys => "horizon.extras.repro_keys.tooltip",\n            Item::DiscordPresence => "horizon.extras.discord_presence.tooltip",',
+    "Discord Presence description key",
+)
+extras = replace_once(
+    extras,
+    '            Item::ReproKeys => "Recording shortcuts",',
+    '            Item::ReproKeys => "Recording shortcuts",\n            Item::DiscordPresence => "Discord Rich Presence",',
+    "Discord Presence caption",
+)
+extras = replace_once(
+    extras,
+    "| AutoReconnect | NoAi | AgentControl | ReproKeys | Splitscreen",
+    "| AutoReconnect | NoAi | AgentControl | ReproKeys | DiscordPresence | Splitscreen",
+    "Discord Presence parent match",
+)
+extras = replace_once(
+    extras,
+    '            Item::Splitscreen => {\n                "In a world, another controller can join as a new player:',
+    '            Item::DiscordPresence => {\n                "Shows Playing Horizon on your Discord profile while Discord runs: menus, single player or multiplayer, the dimension and the time played. Never a world\\'s name or a server\\'s address."\n            }\n            Item::Splitscreen => {\n                "In a world, another controller can join as a new player:',
+    "Discord Presence description",
+)
+extras = replace_once(
+    extras,
+    "| Item::Splitscreen => Some(Cost::None),",
+    "| Item::DiscordPresence | Item::Splitscreen => Some(Cost::None),",
+    "Discord Presence cost",
+)
+extras = replace_once(
+    extras,
+    "            Item::ReproKeys => e.repro_keys,\n            Item::Splitscreen =>",
+    "            Item::ReproKeys => e.repro_keys,\n            Item::DiscordPresence => e.discord_presence,\n            Item::Splitscreen =>",
+    "Discord Presence switch",
+)
+extras = replace_once(
+    extras,
+    "            Item::ReproKeys => e.repro_keys = !e.repro_keys,\n            Item::Splitscreen =>",
+    "            Item::ReproKeys => e.repro_keys = !e.repro_keys,\n            Item::DiscordPresence => e.discord_presence = !e.discord_presence,\n            Item::Splitscreen =>",
+    "Discord Presence cycle",
+)
+extras = replace_once(
+    extras,
+    "        assert!(!d.wheel_cycles_settings);",
+    "        assert!(!d.wheel_cycles_settings);\n        assert!(d.discord_presence);",
+    "Discord Presence default test",
+)
+extras_path.write_text(extras, encoding="utf-8")
+print("Restored Ray's Discord Rich Presence setting on the upstream 0.9.0 model.")
+
 build_path = Path("packaging/android/build_apk.py")
 build = build_path.read_text(encoding="utf-8")
 build, name_count = re.subn(
