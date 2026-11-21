@@ -57,6 +57,102 @@ replacement = """                // Starling Settings sits centered above the va
 path.write_text(source[:start] + replacement + source[end:], encoding="utf-8")
 print("Restored Ray's centered Starling Settings row.")
 
+# Keep Ray's graphics organization on top of the new 0.9.0 settings-shell API:
+# Quality is part of General, while the preset, resolution-scale and battery
+# controls remain hidden (the underlying upstream settings stay intact).
+graphics_path = Path("crates/horizon-client-render/src/graphics_ui.rs")
+graphics = graphics_path.read_text(encoding="utf-8")
+
+old_all = """    pub const ALL: [Page; 6 + cfg!(target_os = "android") as usize] = [
+        Page::General,
+        #[cfg(target_os = "android")]
+        Page::Display,
+        Page::Quality,"""
+new_all = """    pub const ALL: [Page; 5 + cfg!(target_os = "android") as usize] = [
+        Page::General,
+        #[cfg(target_os = "android")]
+        Page::Display,"""
+if graphics.count(old_all) != 1:
+    raise SystemExit("Expected one upstream graphics page list")
+graphics = graphics.replace(old_all, new_all, 1)
+
+rows_start = graphics.index("pub fn rows()")
+quality_row = graphics.find("            Page::Quality,", rows_start)
+if quality_row < 0:
+    raise SystemExit("Expected the upstream Quality settings group")
+graphics = graphics[:quality_row] + graphics[quality_row:].replace(
+    "            Page::Quality,", "            Page::General,", 1
+)
+
+old_return = """    pages
+}
+
+fn display_setting"""
+new_return = """    // Ray keeps these controls out of the graphics UI: the preset changes
+    // several unrelated options at once, resolution scale is controlled by
+    // the render-path source of truth, and Battery Mode duplicates power policy.
+    for (_, groups) in &mut pages {
+        for (_, rows) in groups.iter_mut() {
+            rows.retain(|row| {
+                !matches!(
+                    row.item,
+                    Item::Horizon(H::Preset | H::ResolutionScale | H::BatteryMode)
+                )
+            });
+        }
+        groups.retain(|(_, rows)| !rows.is_empty());
+    }
+    pages
+}
+
+fn display_setting"""
+if graphics.count(old_return) != 1:
+    raise SystemExit("Expected one graphics rows() return block")
+graphics = graphics.replace(old_return, new_return, 1)
+
+tests_at = graphics.find("#[cfg(test)]")
+if tests_at < 0:
+    raise SystemExit("Expected graphics UI tests")
+tests = graphics[tests_at:]
+tests = tests.replace(
+    "assert_eq!(settings(&mut ui, &s), on(Page::Quality));",
+    "assert_eq!(settings(&mut ui, &s), on(Page::Performance));",
+)
+tests = tests.replace(
+    "assert_eq!(ui.current_page(&s, SIZE), Some(Page::Quality));",
+    "assert_eq!(ui.current_page(&s, SIZE), Some(Page::Performance));",
+)
+tests = tests.replace(
+    "(Page::Quality, Item::Vanilla(Opt::Clouds))",
+    "(Page::General, Item::Vanilla(Opt::Clouds))",
+)
+tests = tests.replace(
+    "(Page::Quality, Item::Vanilla(Opt::CloudRange))",
+    "(Page::General, Item::Vanilla(Opt::CloudRange))",
+)
+old_preset_test = """        // Both presets answer "preset"; Horizon's own, named apart from vanilla's, answers its name.
+        ui.set_search("preset");
+        let found = ui.listed(&s, SIZE);
+        let general = |item| (Page::General, item);
+        assert!(found.contains(&general(Item::Horizon(H::Preset))));
+        assert!(found.contains(&general(Item::Vanilla(Opt::Preset))));
+        ui.set_search("horizon preset");
+        assert_eq!(ui.listed(&s, SIZE), [general(Item::Horizon(H::Preset))]);"""
+new_preset_test = """        // Vanilla presets remain available; Ray hides Horizon's bulk preset control.
+        ui.set_search("preset");
+        let found = ui.listed(&s, SIZE);
+        let general = |item| (Page::General, item);
+        assert!(!found.contains(&general(Item::Horizon(H::Preset))));
+        assert!(found.contains(&general(Item::Vanilla(Opt::Preset))));
+        ui.set_search("horizon preset");
+        assert!(ui.listed(&s, SIZE).is_empty());"""
+if tests.count(old_preset_test) != 1:
+    raise SystemExit("Expected the upstream preset search test")
+tests = tests.replace(old_preset_test, new_preset_test, 1)
+graphics = graphics[:tests_at] + tests
+graphics_path.write_text(graphics, encoding="utf-8")
+print("Restored Ray's merged General graphics page and hidden legacy controls.")
+
 build_path = Path("packaging/android/build_apk.py")
 build = build_path.read_text(encoding="utf-8")
 build, name_count = re.subn(
