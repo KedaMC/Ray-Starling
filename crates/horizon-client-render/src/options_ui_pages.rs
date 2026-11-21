@@ -130,15 +130,7 @@ impl OptionsUi {
                 ),
                 None,
             ),
-            // A phone has no Discord client to show the game in.
-            if cfg!(target_os = "android") {
-                Row::Buttons(ai, None)
-            } else {
-                Row::Buttons(
-                    self.extra_button(s, crate::extras::Item::DiscordPresence),
-                    Some(ai),
-                )
-            },
+            Row::Buttons(ai, None),
         ];
         if !s.extras.no_ai {
             rows.push(Row::Buttons(

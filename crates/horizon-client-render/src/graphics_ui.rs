@@ -695,7 +695,7 @@ pub fn rows() -> Vec<(Page, Vec<(&'static str, Vec<Setting>)>)> {
     for (page, groups) in pages {
         match merged.iter_mut().find(|(p, _)| *p == page) {
             Some((_, kept)) => kept.extend(groups),
-            None => merged.push((page, groups)),
+            Option::None => merged.push((page, groups)),
         }
     }
     for (_, groups) in &mut merged {
