@@ -188,7 +188,7 @@ if name_count != 1 or code_count != 1 or app_id_count != 1:
 build_path.write_text(build, encoding="utf-8")
 print("Set Ray package ID and APK version to com.raystarling.strong / 0.9.0 (14).")
 
-workflow_path = Path(".github/workflows/build.yml")
+workflow_path = Path(".github/workflows/android.yml")
 workflow = workflow_path.read_text(encoding="utf-8")
 target = "$" + "{{ matrix.target }}"
 old_rust = (
