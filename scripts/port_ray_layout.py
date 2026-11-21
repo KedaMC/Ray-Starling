@@ -198,9 +198,9 @@ old_rust = (
 new_rust = "          bash tools/ci/rustup_install.sh --profile minimal --target " + target
 if workflow.count(old_rust) == 1:
     workflow = workflow.replace(old_rust, new_rust, 1)
-elif workflow.count(new_rust) != 1:
+elif "bash tools/ci/rustup_install.sh --profile minimal --component rust-src --target" not in workflow:
     raise SystemExit(
-        "Expected either one floating Rust toolchain block or the existing pinned installer"
+        "Android workflow does not use the repository-pinned Rust installer"
     )
 workflow_path.write_text(workflow, encoding="utf-8")
 print("Verified Ray APK workflow uses the repository-pinned Rust toolchain.")
