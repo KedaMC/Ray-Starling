@@ -72,7 +72,9 @@ jobs:
           path: port-tools
 
       - name: Restore Ray's centered Starling Settings entry
-        run: python port-tools/scripts/port_ray_layout.py
+        run: |
+          python port-tools/scripts/port_ray_layout.py
+          rm -rf port-tools
 
       - name: Verify Ray-specific behavior survived
         shell: bash
@@ -89,7 +91,16 @@ jobs:
           grep -q 'settings_y_rows' crates/horizon-client-render/src/options_ui/layout.rs
           grep -q 'Starling Settings...' crates/horizon-client/assets/horizon/lang/en_us.json
           grep -q 'VERSION_NAME = "0.9.0"' packaging/android/build_apk.py
+          ! grep -q 'rustup toolchain install stable' .github/workflows/build.yml
+          grep -q 'rustup_install.sh --profile minimal --target' .github/workflows/build.yml
           echo "Ray package, importers and graphics/settings layout checks passed."
+
+      - name: Create the single integration commit locally before testing
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -A
+          git commit -m "chore: port Starling 0.9.0 into Ray Starling"
 
       - name: Check public tree and Python tooling
         run: |
@@ -123,8 +134,4 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "chore: port Starling 0.9.0 into Ray Starling"
           git push origin HEAD:refs/heads/Ray-Starling
