@@ -34,13 +34,13 @@ jobs:
         run: |
           set -euo pipefail
           BASE=5432370d573642041585c69b40fb045b27133488
-          EXPECTED=5ec035864e8c769758b0daee15ba985481c6b22a
-          git fetch --depth=1 https://github.com/starling-client/starling.git refs/tags/0.9.0:refs/tags/upstream-0.9.0
-          ACTUAL="$(git rev-parse 'refs/tags/upstream-0.9.0^{commit}')"
+          EXPECTED=ff303502a4f7982551a0e0d3622d9268efe9e829
+          git fetch --depth=1 https://github.com/starling-client/starling.git refs/tags/v0.9.0:refs/tags/upstream-v0.9.0
+          ACTUAL="$(git rev-parse 'refs/tags/upstream-v0.9.0^{commit}')"
           test "$ACTUAL" = "$EXPECTED"
           git cat-file -e "$BASE^{commit}"
           test "$(git merge-base HEAD "$BASE")" = "$BASE"
-          UPSTREAM_TREE="$(git rev-parse 'refs/tags/upstream-0.9.0^{tree}')"
+          UPSTREAM_TREE="$(git rev-parse 'refs/tags/upstream-v0.9.0^{tree}')"
           SYNTHETIC_UPSTREAM="$(printf '%s\n' 'Starling 0.9.0 snapshot (synthetic parent at shared base)' | git commit-tree "$UPSTREAM_TREE" -p "$BASE")"
           echo "SYNTHETIC_UPSTREAM=$SYNTHETIC_UPSTREAM" >> "$GITHUB_ENV"
 
