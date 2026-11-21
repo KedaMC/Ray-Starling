@@ -123,6 +123,10 @@ tests = tests.replace(
     "assert_eq!(ui.current_page(&s, SIZE), Some(Page::Performance));",
 )
 tests = tests.replace(
+    "focus_on(&mut ui, Item::Horizon(H::Preset));",
+    "focus_on(&mut ui, Item::Horizon(H::LodDistance));",
+)
+tests = tests.replace(
     "(Page::Quality, Item::Vanilla(Opt::Clouds))",
     "(Page::General, Item::Vanilla(Opt::Clouds))",
 )
