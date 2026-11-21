@@ -67,7 +67,7 @@ build, name_count = re.subn(
     flags=re.MULTILINE,
 )
 build, code_count = re.subn(
-    r"^VERSION_CODE = \\d+$",
+    r"^VERSION_CODE = \d+$",
     "VERSION_CODE = 14",
     build,
     count=1,
