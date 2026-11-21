@@ -103,7 +103,7 @@ jobs:
           grep -q 'Starling Settings...' crates/horizon-client/assets/horizon/lang/en_us.json
           grep -q 'VERSION_NAME = "0.9.0"' packaging/android/build_apk.py
           ! grep -q 'rustup toolchain install stable' .github/workflows/android.yml
-          grep -q 'rustup_install.sh --profile minimal --target' .github/workflows/android.yml
+          grep -q 'rustup_install.sh --profile minimal --component rust-src --target' .github/workflows/android.yml
           echo "Ray package, importers and graphics/settings layout checks passed."
 
       - name: Create the single integration commit locally before testing
