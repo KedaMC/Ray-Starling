@@ -79,3 +79,13 @@ if name_count != 1 or code_count != 1:
     )
 build_path.write_text(build, encoding="utf-8")
 print("Set Ray APK version to upstream 0.9.0 (version code 14).")
+
+workflow_path = Path(".github/workflows/build.yml")
+workflow = workflow_path.read_text(encoding="utf-8")
+old_rust = """          rustup toolchain install stable --profile minimal --target ${{ matrix.target }}
+          rustup default stable"""
+new_rust = """          bash tools/ci/rustup_install.sh --profile minimal --target ${{ matrix.target }}"""
+if workflow.count(old_rust) != 1:
+    raise SystemExit(f"Expected one floating Rust toolchain block, found {workflow.count(old_rust)}")
+workflow_path.write_text(workflow.replace(old_rust, new_rust, 1), encoding="utf-8")
+print("Switched Ray APK workflow to the repository-pinned Rust toolchain.")
