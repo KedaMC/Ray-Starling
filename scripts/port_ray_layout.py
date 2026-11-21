@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 path = Path("crates/horizon-client-render/src/options_ui/layout.rs")
 source = path.read_text(encoding="utf-8")
@@ -55,3 +56,26 @@ replacement = """                // Starling Settings sits centered above the va
 
 path.write_text(source[:start] + replacement + source[end:], encoding="utf-8")
 print("Restored Ray's centered Starling Settings row.")
+
+build_path = Path("packaging/android/build_apk.py")
+build = build_path.read_text(encoding="utf-8")
+build, name_count = re.subn(
+    r'^VERSION_NAME = "[^"]+"$',
+    'VERSION_NAME = "0.9.0"',
+    build,
+    count=1,
+    flags=re.MULTILINE,
+)
+build, code_count = re.subn(
+    r"^VERSION_CODE = \\d+$",
+    "VERSION_CODE = 14",
+    build,
+    count=1,
+    flags=re.MULTILINE,
+)
+if name_count != 1 or code_count != 1:
+    raise SystemExit(
+        f"Expected one version name/code declaration, got {name_count}/{code_count}"
+    )
+build_path.write_text(build, encoding="utf-8")
+print("Set Ray APK version to upstream 0.9.0 (version code 14).")
