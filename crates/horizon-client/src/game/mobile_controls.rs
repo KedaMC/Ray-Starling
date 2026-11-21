@@ -1903,7 +1903,8 @@ impl Game<'_> {
             self.mobile.controls.settings.virtual_mouse_sensitivity,
             !self.mobile.ui.mouse_held(),
         );
-        self.cursor = (position[0], position[1]);
+        // Let CursorMoved update the cursor after it captures the previous position.
+        // Pre-assigning it here erased the delta used by inventory-player tracking.
         self.handle_window_event(
             events,
             id,

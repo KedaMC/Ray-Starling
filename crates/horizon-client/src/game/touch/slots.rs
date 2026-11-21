@@ -189,6 +189,14 @@ impl Game<'_> {
             self.touch.slots = SlotTouch::default();
             return false;
         }
+        // Slot-touch handling consumes these events instead of forwarding CursorMoved.
+        // Keep the GUI cursor in sync so the inventory player model can follow the finger
+        // while an item is picked up and dragged across the inventory.
+        let scale = f64::from(self.touch_gui_batch().scale);
+        self.cursor = (
+            (t.location.x / scale) as f32,
+            (t.location.y / scale) as f32,
+        );
         if let Some((finger, last)) = self.touch.slots.turning
             && finger == t.id
         {
