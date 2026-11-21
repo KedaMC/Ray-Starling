@@ -1,5 +1,5 @@
 //! Horizon's own graphics settings screen: its settings on pages (General,
-//! Quality, Performance, Advanced and HDR), with a page list, search field
+//! Performance, Advanced and HDR), with a page list, search field
 //! and descriptions. Vanilla video settings remain in Video Settings.
 //! Which Horizon settings it shows, their descriptions and input live here;
 //! how it looks comes from `graphics_style`.
@@ -20,16 +20,14 @@ use crate::{
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Page {
     General,
-    Quality,
     Performance,
     Advanced,
     /// HDR output's own settings.
     Hdr,
 }
 impl Page {
-    pub const ALL: [Page; 5] = [
+    pub const ALL: [Page; 4] = [
         Page::General,
-        Page::Quality,
         Page::Performance,
         Page::Advanced,
         Page::Hdr,
@@ -46,9 +44,8 @@ impl Page {
     /// What the page holds, in the strip while no setting is pointed at.
     pub fn about(self) -> &'static str {
         match self {
-            Page::General => "How far you see, the window and the HUD.",
-            Page::Quality => "The sky and weather, lighting, textures and the image.",
-            Page::Performance => "Chunk loading, culling and power use.",
+            Page::General => "Distance, sky and weather, textures and image quality.",
+            Page::Performance => "Chunk loading, culling and block-entity caching.",
             Page::Advanced => "How frames reach the screen, and the performance overlay.",
             Page::Hdr => "Brighter-than-white output on an HDR display.",
         }
@@ -58,7 +55,6 @@ impl Page {
 /// Horizon's own settings (`graphics::Graphics`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum H {
-    Preset,
     LodDistance,
     FarDetail,
     BlueMapAutoDetect,
@@ -84,7 +80,6 @@ pub enum H {
     Pacing,
     Workers,
     Overlay,
-    ResolutionScale,
     Antialiasing,
     Upscaling,
     ScreenshotQuality,
@@ -98,7 +93,6 @@ pub enum H {
     HdrPeak,
     HdrPaperWhite,
     HdrUiBrightness,
-    BatteryMode,
     ShadowCache,
     GraphicsApi,
     TranslucentBatching,
@@ -138,14 +132,6 @@ pub fn rows() -> Vec<(Page, Vec<(&'static str, Vec<Setting>)>)> {
             Page::General,
             vec![
                 (
-                    "Preset",
-                    vec![h(
-                        H::Preset,
-                        None,
-                        "Sets distance, particles, shadows, sky and fog; changing one makes it Custom.",
-                    )],
-                ),
-                (
                     "Distance",
                     vec![
                         h(
@@ -166,21 +152,7 @@ pub fn rows() -> Vec<(Page, Vec<(&'static str, Vec<Setting>)>)> {
                         ),
                     ],
                 ),
-                (
-                    "Display",
-                    vec![
-                    ],
-                ),
-                (
-                    "Interface",
-                    vec![
-                    ],
-                ),
-            ],
-        ),
-        (
-            Page::Quality,
-            vec![
+
                 (
                     "Sky and weather",
                     vec![
@@ -217,8 +189,7 @@ pub fn rows() -> Vec<(Page, Vec<(&'static str, Vec<Setting>)>)> {
                     "Image",
                     vec![
                         h(
-                            H::ResolutionScale,
-                            High,
+                                            High,
                             "World pixels per screen pixel. Below 100% is faster on the GPU.",
                         ),
                         h(
@@ -332,14 +303,6 @@ pub fn rows() -> Vec<(Page, Vec<(&'static str, Vec<Setting>)>)> {
                             "Reuses statue geometry until its block state changes.",
                         ),
                     ],
-                ),
-                (
-                    "Power",
-                    vec![h(
-                        H::BatteryMode,
-                        None,
-                        "60 FPS cap (30 in menus or unfocused), half the workers: less power.",
-                    )],
                 ),
             ],
         ),
@@ -568,7 +531,6 @@ impl H {
                 Some(i as f32 / (LOD_STEPS.len() - 1) as f32)
             }
             H::Workers => Some(g.workers as f32 / max_workers() as f32),
-            H::ResolutionScale => Some((g.resolution_scale as f32 - 25.0) / 175.0),
             // Auto, then 10..480 by 10.
             H::HdrPaperWhite => Some(g.hdr_paper_white as f32 / 480.0),
             // Auto, then 200..2000 by 50.
@@ -586,7 +548,6 @@ impl H {
             H::ChunkUpdates => Some(64),
             H::UploadBudget => Some((UPLOAD_STEPS.len() - 1) as u32),
             H::Workers => Some(max_workers()),
-            H::ResolutionScale => Some(35),
             H::HdrPaperWhite => Some(41),
             H::HdrPeak => Some(37),
             H::HdrBlackLevel => Some(100),
@@ -597,7 +558,6 @@ impl H {
     fn label(self, s: &Settings) -> Text {
         let g = &s.horizon;
         match self {
-            H::Preset => labelled("Preset", g.preset.label()),
             H::LodDistance => match g.lod_distance {
                 0 => labelled("LOD Distance", "Off"),
                 n => labelled("LOD Distance", lang::tr("%s chunks", &[&n])),
@@ -651,7 +611,6 @@ impl H {
                 ),
                 n => labelled("Worker Threads", n),
             },
-            H::ResolutionScale => labelled("Resolution Scale", format!("{}%", g.resolution_scale)),
             H::Antialiasing => labelled(
                 "Anti-aliasing",
                 match (g.fxaa, g.taa) {
@@ -693,7 +652,6 @@ impl H {
             H::HdrKey => {
                 Text::translate("Shortcut: %s", &[crate::keybinds::display_name(&g.hdr_key)])
             }
-            H::BatteryMode => labelled("Battery Mode", on_off(g.battery)),
             H::ShadowCache => labelled("Shadow Cache", on_off(g.shadow_cache)),
             H::GraphicsApi => labelled("Graphics API", g.api.label()),
             // Greyed out where the device can't (`Item::blocked`): Off, as it is there,
@@ -725,7 +683,6 @@ impl H {
                 g.lod_distance = LOD_STEPS[(v * (LOD_STEPS.len() - 1) as f32).round() as usize]
             }
             H::Workers => g.workers = (v * max_workers() as f32).round() as u32,
-            H::ResolutionScale => g.resolution_scale = (25.0 + (v * 35.0).round() * 5.0) as u32,
             H::HdrPaperWhite => g.hdr_paper_white = (v * 48.0).round() as u32 * 10,
             H::HdrPeak => {
                 g.hdr_peak = match (v * 37.0).round() as u32 {
@@ -743,12 +700,6 @@ impl H {
             let i = all.iter().position(|x| *x == now).unwrap_or(0);
             let n = all.len();
             all[if back { (i + n - 1) % n } else { (i + 1) % n }]
-        }
-        if self == H::Preset {
-            let preset = step(&Preset::ALL, s.horizon.preset, back);
-            crate::graphics::apply_preset(preset, s);
-            s.horizon.preset = preset;
-            return;
         }
         let g = &mut s.horizon;
         match self {
@@ -808,7 +759,6 @@ impl H {
                 g.frame_generation = step(&FrameGeneration::ALL, g.frame_generation, back)
             }
             H::Hdr => g.hdr = !g.hdr,
-            H::BatteryMode => g.battery = !g.battery,
             H::ShadowCache => g.shadow_cache = !g.shadow_cache,
             H::GraphicsApi => g.api = step(GraphicsApi::choices(), g.api, back),
             H::TranslucentBatching => g.translucent_batching = !g.translucent_batching,
@@ -899,7 +849,6 @@ impl Item {
             Item::Horizon(H::AnimatedTextures) => g.animated_textures,
             Item::Horizon(H::DitherCutoutMips) => g.dither_cutout_mips,
             Item::Horizon(H::Hdr) => g.hdr,
-            Item::Horizon(H::BatteryMode) => g.battery,
             Item::Horizon(H::ShadowCache) => g.shadow_cache,
             Item::Horizon(H::TranslucentBatching) => g.translucent_batching,
             Item::Vanilla(Opt::ViewBobbing) => s.view_bobbing,
@@ -955,8 +904,7 @@ impl Item {
         let presetless = matches!(
             self,
             Item::Horizon(
-                H::Preset
-                    | H::BlueMapAutoDetect
+                H::BlueMapAutoDetect
                     | H::BlueMapRadius
                     | H::Overlay
                     | H::ScreenshotQuality
@@ -964,7 +912,6 @@ impl Item {
                     | H::PresentMode
                     | H::Workers
                     | H::FrameGeneration
-                    | H::BatteryMode
                     | H::ShadowCache
                     | H::GraphicsApi
                     | H::TranslucentBatching
@@ -2268,53 +2215,25 @@ mod tests {
     }
 
     #[test]
-    fn a_picked_page_shows_alone_in_its_groups_from_the_top() {
-        let mut s = Settings::default();
+    fn quality_settings_are_grouped_under_general() {
+        let s = Settings::default();
         let mut ui = GraphicsUi::default();
-        let settings = |ui: &mut GraphicsUi, s: &Settings| {
-            let (_, lines, _) = ui.layout(s, SIZE.0, SIZE.1);
-            assert!(
-                lines[0].group.is_some(),
-                "the list starts at a group's name"
-            );
-            lines
-                .iter()
-                .filter_map(|l| l.setting.map(|r| (l.page, r.item)))
-                .collect::<Vec<_>>()
-        };
-        // Upscaling shows only with TAA, off by default.
-        let on = |page| -> Vec<(Page, Item)> {
-            items()
-                .into_iter()
-                .filter(|(p, i)| *p == page && *i != Item::Horizon(H::Upscaling))
-                .collect()
-        };
-        assert_eq!(settings(&mut ui, &s), on(Page::General));
-        ui.scroll(&s, SIZE, -3.0);
-        assert!(ui.scroll.amount > 0.0);
-        let [x, y, w, h] = Columns::of(SIZE.0, SIZE.1).page(1);
-        assert_eq!(
-            press(&mut ui, &mut s, (x + w / 2.0, y + h / 2.0)),
-            [Action::ButtonClick]
-        );
-        assert_eq!(settings(&mut ui, &s), on(Page::Quality));
-        assert_eq!(ui.scroll.amount, 0.0);
-        // Groups sit apart: each name follows the gap under the panel before it.
         let (_, lines, _) = ui.layout(&s, SIZE.0, SIZE.1);
-        assert_eq!(ui.current(&lines), Some(Page::Quality));
-        let names: Vec<&Line> = lines.iter().filter(|l| l.group.is_some()).collect();
-        assert!(names.len() > 1);
-        for pair in names.windows(2) {
-            let (_, panel) = pair[0].group.unwrap();
-            assert_eq!(
-                pair[1].y,
-                pair[0].y + style::GROUP_ROW + panel + style::GROUP_GAP
-            );
+        let items: Vec<Item> = lines.iter().filter_map(|line| line.setting.map(|row| row.item)).collect();
+        for item in [
+            Item::Horizon(H::Sky),
+            Item::Horizon(H::Fog),
+            Item::Horizon(H::Weather),
+            Item::Horizon(H::AnimatedTextures),
+            Item::Horizon(H::DitherCutoutMips),
+            Item::Horizon(H::Antialiasing),
+            Item::Horizon(H::ScreenshotQuality),
+            Item::Horizon(H::FrameGeneration),
+        ] {
+            assert!(items.contains(&item), "{item:?} should be on General");
         }
-        // Opened at a page (Advanced..., the HDR key), it shows that page.
-        let mut ui = GraphicsUi::default();
-        ui.open(Page::Hdr);
-        assert_eq!(settings(&mut ui, &s), on(Page::Hdr));
+        assert!(lines.iter().all(|line| line.page == Page::General));
+        assert!(!items.contains(&Item::Horizon(H::ResolutionScale)));
     }
 
     #[test]
@@ -2325,7 +2244,7 @@ mod tests {
         let mut ui = GraphicsUi::default();
         let cols = Columns::of(size.0, size.1);
         assert!((cols.bottom - cols.top) / style::ROW >= 5.0);
-        let [x, y, w, h] = cols.page(4);
+        let [x, y, w, h] = cols.page(3);
         assert!(y >= 0.0 && x + w <= size.0);
         // Undo, over Done, stays clear of the page list.
         assert!(cols.button(1)[1] >= y + h);
@@ -2338,7 +2257,7 @@ mod tests {
     fn a_finger_scrolls_from_a_stepped_row_and_drags_a_slider() {
         let s = Settings::default();
         let mut ui = GraphicsUi::default();
-        let [x, y, w, h] = row(&mut ui, &s, Item::Horizon(H::Preset));
+        let [x, y, w, h] = row(&mut ui, &s, Item::Horizon(H::BlueMapRadius));
         assert!(ui.row_button_at(&s, SIZE, (x + w - 10.0, y + h / 2.0)));
         let [x, y, w, h] = row(&mut ui, &s, Item::Horizon(H::ChunkUpdates));
         assert!(!ui.row_button_at(&s, SIZE, (x + w - 10.0, y + h / 2.0)));
@@ -2627,7 +2546,7 @@ mod tests {
         ui.key_modifiers(&mut s, K::ArrowUp, None, false, SIZE, FB);
         assert_eq!(ui.focus, Some(Target::Page(Page::Hdr)));
         // Its row wheeled far out of view: Down takes the first row in view, as it is.
-        ui.focus = Some(Target::Item(Item::Horizon(H::Preset)));
+        ui.focus = Some(Target::Item(Item::Horizon(H::LodDistance)));
         ui.scroll(&s, SIZE, -1000.0);
         let before = ui.scroll.amount;
         assert!(before > 0.0);
@@ -2781,26 +2700,11 @@ mod tests {
         assert_eq!(s.horizon.preset, Preset::Custom);
     }
 
-    #[test]
-    fn presets_set_vanilla_and_horizon_options() {
-        let mut s = Settings::default();
-        Item::Horizon(H::Preset).cycle(&mut s, false, [854, 480]);
-        assert_eq!(s.horizon.preset, Preset::Performance);
-        assert_eq!(s.render_distance, 8);
-        assert_eq!(s.clouds, "false");
-        // Any quality change leaves the preset.
-        Item::Vanilla(Opt::Clouds).cycle(&mut s, false, [854, 480]);
-        assert_eq!(s.horizon.preset, Preset::Custom);
-        // Display preferences keep it.
-        Item::Horizon(H::Preset).cycle(&mut s, true, [854, 480]);
-        Item::Vanilla(Opt::Vsync).cycle(&mut s, false, [854, 480]);
-        assert_eq!(s.horizon.preset, Preset::Ultra);
-    }
 
     #[test]
     fn screenshot_quality_cycles_1_2_4_8_and_keeps_the_preset() {
         let mut s = Settings::default();
-        Item::Horizon(H::Preset).cycle(&mut s, false, [854, 480]);
+        s.horizon.preset = Preset::Performance;
         let mut seen = Vec::new();
         for _ in 0..4 {
             Item::Horizon(H::ScreenshotQuality).cycle(&mut s, false, [854, 480]);
