@@ -10,7 +10,7 @@ permissions:
 
 concurrency:
   group: ray-starling-0.9.0-port-upstream-first
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   port:
@@ -63,6 +63,17 @@ jobs:
           # Keep the eventual integration commit as a single child of Ray's
           # current branch tip, so the final push remains a fast-forward.
           git read-tree --reset -u "$MERGED_TREE"
+
+          # These modules were redesigned upstream for 0.9.0. Ray's older edits
+          # overlap only in small hunks but depend on the pre-0.9.0 APIs; retain
+          # the upstream implementations and reapply Ray's UI decisions in the
+          # port helper instead of mixing incompatible implementations.
+          git restore --source=refs/tags/upstream-v0.9.0 --worktree --staged -- \
+            crates/horizon-client-render/src/extras.rs \
+            crates/horizon-client-render/src/graphics.rs \
+            crates/horizon-client-render/src/graphics_ui.rs \
+            crates/horizon-client-render/src/options_ui.rs
+
           git diff --check
           echo "Upstream-first merged tree: $MERGED_TREE"
           git status --short
