@@ -47,7 +47,7 @@ jobs:
           # Apply only Ray's actual delta (BASE..RAY_HEAD) on top of the complete
           # 0.9.0 tree. This avoids retaining stale Ray files merely because an
           # entire file changed upstream and then mixing incompatible APIs.
-          MERGE_OUTPUT="$(git merge-tree --write-tree --merge-base="$BASE" -X theirs "$UPSTREAM" "$RAY_HEAD")"
+          MERGE_OUTPUT="$(git merge-tree --write-tree --merge-base="$BASE" -X ours "$UPSTREAM" "$RAY_HEAD")"
           MERGED_TREE="$(printf '%s\n' "$MERGE_OUTPUT" | head -n 1)"
           if ! git cat-file -e "$MERGED_TREE^{tree}" 2>/dev/null; then
             echo "Could not produce the merged source tree:"
@@ -90,7 +90,7 @@ jobs:
           ! grep -q 'H::ResolutionScale' crates/horizon-client-render/src/graphics_ui.rs
           ! grep -q 'H::BatteryMode' crates/horizon-client-render/src/graphics_ui.rs
           ! grep -q 'Preset::' crates/horizon-client-render/src/graphics_ui.rs
-          ! grep -q 'wheel_cycles_settings' crates/horizon-client-render/src/extras.rs
+          grep -q 'pub wheel_cycles_settings: bool' crates/horizon-client-render/src/extras.rs
           grep -q 'settings_y_rows' crates/horizon-client-render/src/options_ui/layout.rs
           grep -q 'Starling Settings...' crates/horizon-client/assets/horizon/lang/en_us.json
           grep -q 'VERSION_NAME = "0.9.0"' packaging/android/build_apk.py
