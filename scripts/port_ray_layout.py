@@ -231,7 +231,7 @@ extras = replace_once(
 extras = replace_once(
     extras,
     '            Item::Splitscreen => {\n                "In a world, another controller can join as a new player:',
-    '            Item::DiscordPresence => {\n                "Shows Playing Horizon on your Discord profile while Discord runs: menus, single player or multiplayer, the dimension and the time played. Never a world\\'s name or a server\\'s address."\n            }\n            Item::Splitscreen => {\n                "In a world, another controller can join as a new player:',
+    '            Item::DiscordPresence => {\n                "Shows Playing Horizon on your Discord profile while Discord runs: menus, single player or multiplayer, the dimension and the time played. Never reveals world names or server addresses."\n            }\n            Item::Splitscreen => {\n                "In a world, another controller can join as a new player:',
     "Discord Presence description",
 )
 extras = replace_once(
