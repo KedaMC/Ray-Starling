@@ -58,8 +58,8 @@ path.write_text(source[:start] + replacement + source[end:], encoding="utf-8")
 print("Restored Ray's centered Starling Settings row.")
 
 # Keep Ray's graphics organization on top of the new 0.9.0 settings-shell API:
-# Quality is part of General, while the preset, resolution-scale and battery
-# controls remain hidden (the underlying upstream settings stay intact).
+# Quality is part of General; Horizon's bulk preset, resolution-scale and
+# Battery Mode controls remain hidden, as in Ray's existing graphics UI.
 graphics_path = Path("crates/horizon-client-render/src/graphics_ui.rs")
 graphics = graphics_path.read_text(encoding="utf-8")
 
@@ -169,22 +169,8 @@ build, code_count = re.subn(
     count=1,
     flags=re.MULTILINE,
 )
-if name_count != 1 or code_count != 1:
-    raise SystemExit(
-        f"Expected one version name/code declaration, got {name_count}/{code_count}"
-    )
 build, app_id_count = re.subn(
-    r'^APPLICATION_ID = "[^"]+"
-workflow_path = Path(".github/workflows/build.yml")
-workflow = workflow_path.read_text(encoding="utf-8")
-old_rust = """          rustup toolchain install stable --profile minimal --target ${{ matrix.target }}
-          rustup default stable"""
-new_rust = """          bash tools/ci/rustup_install.sh --profile minimal --target ${{ matrix.target }}"""
-if workflow.count(old_rust) != 1:
-    raise SystemExit(f"Expected one floating Rust toolchain block, found {workflow.count(old_rust)}")
-workflow_path.write_text(workflow.replace(old_rust, new_rust, 1), encoding="utf-8")
-print("Switched Ray APK workflow to the repository-pinned Rust toolchain.")
-,
+    r'^APPLICATION_ID = "[^"]+"$',
     'APPLICATION_ID = "com.raystarling.strong"',
     build,
     count=1,
@@ -200,9 +186,12 @@ print("Set Ray package ID and APK version to com.raystarling.strong / 0.9.0 (14)
 
 workflow_path = Path(".github/workflows/build.yml")
 workflow = workflow_path.read_text(encoding="utf-8")
-old_rust = """          rustup toolchain install stable --profile minimal --target ${{ matrix.target }}
-          rustup default stable"""
-new_rust = """          bash tools/ci/rustup_install.sh --profile minimal --target ${{ matrix.target }}"""
+target = "$" + "{{ matrix.target }}"
+old_rust = (
+    "          rustup toolchain install stable --profile minimal --target " + target + "\n"
+    "          rustup default stable"
+)
+new_rust = "          bash tools/ci/rustup_install.sh --profile minimal --target " + target
 if workflow.count(old_rust) != 1:
     raise SystemExit(f"Expected one floating Rust toolchain block, found {workflow.count(old_rust)}")
 workflow_path.write_text(workflow.replace(old_rust, new_rust, 1), encoding="utf-8")
