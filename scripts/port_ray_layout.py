@@ -261,6 +261,43 @@ extras = replace_once(
 extras_path.write_text(extras, encoding="utf-8")
 print("Restored Ray's Discord Rich Presence setting on the upstream 0.9.0 model.")
 
+# Keep Ray's Starling branding in the settings entry across its shipped locales.
+starling_labels = {
+    "de_de": ("Starling-Einstellungen", "Starling-Einstellungen …"),
+    "en_us": ("Starling Settings", "Starling Settings..."),
+    "es_es": ("Ajustes de Starling", "Ajustes de Starling..."),
+    "fr_fr": ("Options Starling", "Options Starling..."),
+    "ms_my": ("Tetapan Starling", "Tetapan Starling..."),
+    "pl_pl": ("Ustawienia Starling", "Ustawienia Starling…"),
+    "ru_ru": ("Настройки Starling", "Настройки Starling..."),
+    "tr_tr": ("Starling Ayarları", "Starling Ayarları..."),
+    "uk_ua": ("Налаштування Starling", "Налаштування Starling…"),
+    "zh_cn": ("Starling 设置", "Starling 设置…"),
+}
+for locale, (settings_label, open_label) in starling_labels.items():
+    language_path = Path(f"crates/horizon-client/assets/horizon/lang/{locale}.json")
+    language = language_path.read_text(encoding="utf-8")
+    language, settings_count = re.subn(
+        r'("horizon\.pages\.settings"\s*:\s*)"[^"]*"',
+        lambda match: match.group(1) + f'"{settings_label}"',
+        language,
+        count=1,
+    )
+    language, open_count = re.subn(
+        r'("horizon\.pages\.open\.horizon_settings"\s*:\s*)"[^"]*"',
+        lambda match: match.group(1) + f'"{open_label}"',
+        language,
+        count=1,
+    )
+    if settings_count != 1 or open_count != 1:
+        raise SystemExit(
+            f"Expected one Starling Settings label pair in {locale}, "
+            f"found {settings_count}/{open_count}"
+        )
+    language_path.write_text(language, encoding="utf-8")
+print("Restored Ray's Starling Settings branding in all ten shipped locales.")
+
+
 build_path = Path("packaging/android/build_apk.py")
 build = build_path.read_text(encoding="utf-8")
 build, name_count = re.subn(
