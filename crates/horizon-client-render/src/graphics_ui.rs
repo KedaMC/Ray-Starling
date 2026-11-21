@@ -165,11 +165,6 @@ pub fn rows() -> Vec<(Page, Vec<(&'static str, Vec<Setting>)>)> {
                     ],
                 ),
                 (
-                    "Lighting and entities",
-                    vec![
-                    ],
-                ),
-                (
                     "Textures",
                     vec![
                         h(
@@ -187,10 +182,6 @@ pub fn rows() -> Vec<(Page, Vec<(&'static str, Vec<Setting>)>)> {
                 (
                     "Image",
                     vec![
-                        h(
-                                            High,
-                            "World pixels per screen pixel. Below 100% is faster on the GPU.",
-                        ),
                         h(
                             H::Antialiasing,
                             Medium,
