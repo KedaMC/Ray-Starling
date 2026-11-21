@@ -236,8 +236,8 @@ extras = replace_once(
 )
 extras = replace_once(
     extras,
-    "| Item::Splitscreen | Item::WheelCyclesSettings | Item::PackBrowser => Some(Cost::None),",
-    "| Item::DiscordPresence | Item::Splitscreen | Item::WheelCyclesSettings | Item::PackBrowser => Some(Cost::None),",
+    "| Item::Sort\n            | Item::Splitscreen\n            | Item::WheelCyclesSettings\n            | Item::PackBrowser => Some(Cost::None),",
+    "| Item::Sort\n            | Item::DiscordPresence\n            | Item::Splitscreen\n            | Item::WheelCyclesSettings\n            | Item::PackBrowser => Some(Cost::None),",
     "Discord Presence cost",
 )
 extras = replace_once(
