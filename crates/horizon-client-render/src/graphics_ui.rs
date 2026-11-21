@@ -814,12 +814,6 @@ impl Item {
             _ => None,
         }
     }
-    /// A value stepped between `<` `>`: not a tick box, a slider or a press.
-    fn steps(self, s: &Settings) -> bool {
-        self.switch(s).is_none()
-            && self.slider(s).is_none()
-            && !matches!(self, Item::Horizon(H::HdrKey | H::HdrCalibrate))
-    }
     /// On/off settings and their value.
     pub fn switch(self, s: &Settings) -> Option<bool> {
         let g = &s.horizon;

@@ -724,10 +724,6 @@ impl Game<'_> {
             has_overlay: false,
         };
         let limit = framerate_limit(self.settings.max_fps as i32, context);
-        let limit = self
-            .settings
-            .horizon
-            .battery_limit(limit, self.title.is_none(), self.focused);
         // A native mod may only lower it (`native_framerate_limit`).
         let mut hooked = limit;
         self.native_framerate_limit(
