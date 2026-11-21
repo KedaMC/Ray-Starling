@@ -748,6 +748,10 @@ impl Loading {
             self.failure = None;
             return Ok(());
         }
+        // A failed handoff may have consumed the menu bundle and renderer. Rebuild them
+        // before trying the newly prepared resources.
+        self.gui = None;
+        self.setup.reload_skin();
         let options = self.options.as_ref().ok_or("loading already finished")?;
         if let Some(handle) = self.handle.take() {
             let _ = handle.join();
@@ -992,12 +996,15 @@ impl Loading {
         built: Option<Renderer>,
     ) -> Result<Option<split::Split<'static>>> {
         let handoff_at = Instant::now();
-        let mut options = self.options.take().ok_or("loading already finished")?;
+        // Keep launch options available if a later handoff step fails. Android can prepare
+        // or import resources and retry in the same loading screen.
+        let options = self.options.as_mut().ok_or("loading already finished")?;
         options.resources = loaded.root.clone();
         // StartupMenu owns world selection until it can hand it to Game.
         options.world = None;
         options.server = None;
-        let gui = self.gui.take().ok_or("missing menu bundle")?;
+        let options = options.clone();
+        let menu_gui = self.gui.as_ref().ok_or("missing menu bundle")?;
         let window = self.window.clone().ok_or("window closed")?;
         let filtering = (
             self.settings.file.int("textureFiltering"),
@@ -1021,7 +1028,7 @@ impl Loading {
                 finish_renderer(
                     &mut renderer,
                     &loaded.pack,
-                    &gui,
+                    menu_gui,
                     filtering,
                     (self.settings.vsync, self.settings.horizon.present_mode),
                 )?;
@@ -1037,7 +1044,7 @@ impl Loading {
                         window.clone(),
                         options.offscreen,
                         &loaded.pack,
-                        &gui,
+                        menu_gui,
                         self.renderer.as_ref(),
                         loaded.renderer_cpu.take(),
                         self.settings.horizon.api,
@@ -1086,12 +1093,15 @@ impl Loading {
                 &horizon_client::lang::code(),
             ));
         });
-        let pack_error = loaded.pack_error.or_else(|| self.pack_error.take());
+        let pack_error = loaded.pack_error.clone().or_else(|| self.pack_error.clone());
         // The game borrows its shared resources for the process's lifetime,
         // like the single copy an integrated server would share.
         let res: &'static Arc<Resources> = Box::leak(Box::new(loaded.resources));
         let game_at = Instant::now();
         let game_step = startup::step("handoff.start_game");
+        // Transfer the menu bundle only after the fallible renderer handoff is complete.
+        // If start_game fails, retry() reloads the app's skin before loading again.
+        let gui = self.gui.take().ok_or("missing menu bundle")?;
         let Some(mut game) = start_game(
             res,
             loaded.pack,

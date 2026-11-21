@@ -260,9 +260,6 @@ impl Config {
                 || config.super_perf_mode
                 || config.battery_perf_mode,
         );
-        crate::ha_launcher::client::ui_theme::motion::set_game_animations_disabled(
-            config.disable_game_animations,
-        );
         config
     }
     pub fn save(&self, home: &Path) -> Result<(), String> {
@@ -347,9 +344,6 @@ impl Config {
         let _ = std::fs::create_dir_all(&game);
         let options_path = game.join("options.txt");
         let mut settings = crate::ha_launcher::client::settings::Settings::load(&options_path);
-        crate::ha_launcher::client::ui_theme::motion::set_game_animations_disabled(
-            self.disable_game_animations,
-        );
         if self.disable_game_animations {
             settings.horizon.animated_textures = false;
             settings.chunk_fade = 0.0;
@@ -406,7 +400,6 @@ impl Config {
         settings.save(&options_path);
         let touch_path = game.join("horizon-touch.json");
         let mut touch_cfg = crate::ha_launcher::client::touch::Settings::load_from(&touch_path);
-        touch_cfg.disable_game_animations = self.disable_game_animations;
         touch_cfg.resolution_scale_percent = settings.horizon.resolution_scale.clamp(25, 100);
         let _ = touch_cfg.save_to(&touch_path);
     }

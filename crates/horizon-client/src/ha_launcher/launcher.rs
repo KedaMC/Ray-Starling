@@ -149,9 +149,6 @@ impl Launcher {
         crate::ha_launcher::client::ui_theme::motion::set_launcher_animations_disabled(
             catalog.config.disable_launcher_animations,
         );
-        crate::ha_launcher::client::ui_theme::motion::set_game_animations_disabled(
-            catalog.config.disable_game_animations,
-        );
         // First run: ensure independent MCPE and GoyControl storage directories exist,
         // and initialize MCPE Controls as the default active control system on fresh installs.
         let game_home = catalog.config.game_home(&home);

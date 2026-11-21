@@ -3982,7 +3982,7 @@ impl Launcher {
                     "fast" => "Fast ›",
                     _ => "Fancy ›",
                 };
-                let game_anim_off = c.disable_game_animations || touch_cfg.disable_game_animations;
+                let game_anim_off = c.disable_game_animations;
 
                 let mut rows = vec![
                     (
@@ -4157,7 +4157,7 @@ impl Launcher {
                 } else {
                     c.server.clone()
                 };
-                let game_anim_off = c.disable_game_animations || touch_cfg.disable_game_animations;
+                let game_anim_off = c.disable_game_animations;
 
                 let rows: [(&str, &str, SettingControl<'_>); 13] = [
                     (
@@ -6419,10 +6419,8 @@ impl Launcher {
             Some(Action::ToggleGameAnimations) => {
                 let next = !self.catalog.config.disable_game_animations;
                 self.catalog.config.disable_game_animations = next;
-                crate::ha_launcher::client::ui_theme::motion::set_game_animations_disabled(next);
                 self.catalog.config.save(&self.home)?;
                 self.catalog.config.apply_experimental_to_game(&self.home);
-                self.modify_touch_settings(|t| t.disable_game_animations = next);
                 self.catalog.status = if next {
                     "In-game animations disabled (static textures, instant FOV/menus, no view bobbing)."
                 } else {

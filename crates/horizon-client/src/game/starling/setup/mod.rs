@@ -192,6 +192,13 @@ impl Setup {
         let lively = self.pond.get().is_some() || settings_open;
         std::time::Duration::from_millis(if lively { 33 } else { 400 })
     }
+
+    /// A failed handoff can consume the title bundle. Let the next setup poll recreate its skin.
+    pub(in crate::game) fn reload_skin(&mut self) {
+        if self.skin.is_none() {
+            self.skinned = false;
+        }
+    }
 }
 
 /// Whether the step is a wait worth passing (the water shows).

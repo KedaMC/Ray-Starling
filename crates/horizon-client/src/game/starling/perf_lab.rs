@@ -590,7 +590,7 @@ impl Game<'_> {
         let mut setup = json!({
             "test": self.perf_lab.choices,
             "graphics_api": d(&h.api),
-            "preset": d(&h.preset),
+            "preset": s.graphics_preset.as_str(),
             "render_distance": self.streaming.radius,
             "simulation_distance": s.simulation_distance,
             "lod_distance": self.far_terrain_choice().0,
@@ -618,7 +618,6 @@ impl Game<'_> {
             "present_mode": d(&h.present_mode),
             "pacing": d(&h.pacing),
             "workers": h.workers,
-            "battery": h.battery,
             "vsync": s.vsync,
             "max_fps": s.max_fps,
             "fps_limit": self.framerate_limit(),
