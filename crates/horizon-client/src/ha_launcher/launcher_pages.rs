@@ -326,15 +326,6 @@ pub(super) enum Action {
     GpuProfile,
     // Video settings actions (options.txt)
     RenderScaleDelta(i32),
-    RenderDistDelta(i32),
-    SimDistDelta(i32),
-    CycleMaxFps,
-    CycleGraphicsPreset,
-    ToggleVsync,
-    ToggleSmoothLighting,
-    CycleClouds,
-    ToggleMenuBlur,
-    FovDelta(f32),
     // Animation & Diagnostics Modal actions
     ToggleLauncherAnimations,
     ToggleOpenDirectly,
@@ -3965,23 +3956,6 @@ impl Launcher {
                     format!("{res_pct}%")
                 };
                 let hz_str = format!("{} v", c.device.display_label());
-                let rd_str = format!("{} chunks", opts.render_distance);
-                let rd_frac = ((opts.render_distance - 2) as f32 / 30.0).clamp(0.0, 1.0);
-                let sd_str = format!("{} chunks", opts.simulation_distance);
-                let sd_frac = ((opts.simulation_distance - 5) as f32 / 27.0).clamp(0.0, 1.0);
-                let fov_str = format!("{:.0}°", opts.fov);
-                let fov_frac = ((opts.fov - 30.0) / 80.0).clamp(0.0, 1.0);
-                let preset_str = format!("{} ›", capitalize(&opts.graphics_preset));
-                let fps_str = if opts.max_fps >= 260 {
-                    "Unlimited ›".to_owned()
-                } else {
-                    format!("{} FPS ›", opts.max_fps)
-                };
-                let clouds_str = match opts.clouds.as_str() {
-                    "false" => "Off ›",
-                    "fast" => "Fast ›",
-                    _ => "Fancy ›",
-                };
                 let game_anim_off = c.disable_game_animations;
 
                 let mut rows = vec![
@@ -4026,59 +4000,9 @@ impl Launcher {
                         SettingControl::Toggle(c.screen.immersive, Action::Immersive),
                     ),
                     (
-                        "IN-GAME GRAPHICS, DISTANCES & MOTION",
-                        "Chunk visibility, simulation radius, FOV, framerate & animation controls",
+                        "IN-GAME MOTION",
+                        "Animation controls (render distance, FOV, VSync & the rest are in Minecraft's own Options)",
                         SettingControl::SectionHeader("Minecraft Video", Icon::Shaders),
-                    ),
-                    (
-                        "Render Distance",
-                        "Visible chunk radius (6–8 chunks recommended on Mali-G52 with shaders)",
-                        SettingControl::Slider {
-                            value_label: &rd_str,
-                            fraction: rd_frac,
-                            minus_action: Action::RenderDistDelta(-2),
-                            plus_action: Action::RenderDistDelta(2),
-                        },
-                    ),
-                    (
-                        "Simulation Distance",
-                        "Active entity and block-tick radius around the player",
-                        SettingControl::Slider {
-                            value_label: &sd_str,
-                            fraction: sd_frac,
-                            minus_action: Action::SimDistDelta(-1),
-                            plus_action: Action::SimDistDelta(1),
-                        },
-                    ),
-                    (
-                        "Field of View (FOV)",
-                        "Horizontal camera view angle in degrees",
-                        SettingControl::Slider {
-                            value_label: &fov_str,
-                            fraction: fov_frac,
-                            minus_action: Action::FovDelta(-5.0),
-                            plus_action: Action::FovDelta(5.0),
-                        },
-                    ),
-                    (
-                        "Graphics Quality Preset",
-                        "Cycle between Fast, Fancy and Fabulous rendering modes",
-                        SettingControl::Button(&preset_str, Action::CycleGraphicsPreset, false),
-                    ),
-                    (
-                        "Max Framerate Ceiling",
-                        "Cap gameplay FPS to save power or unlock for high-refresh displays",
-                        SettingControl::Button(&fps_str, Action::CycleMaxFps, false),
-                    ),
-                    (
-                        "Vertical Sync & Cloud Rendering",
-                        "Tap switch to toggle VSync, or cycle Clouds in in-game video options",
-                        SettingControl::Toggle(opts.vsync, Action::ToggleVsync),
-                    ),
-                    (
-                        "Menu Background Blur",
-                        "Cached zero-lag backdrop blur when opening inventory or pause menus",
-                        SettingControl::Toggle(opts.menu_blur > 0, Action::ToggleMenuBlur),
                     ),
                     (
                         "Disable In-Game Animations",
@@ -4092,7 +4016,6 @@ impl Launcher {
                     (rows.len() as f32 * step_y + extra_ime - (list_bottom - list_top)).max(0.0);
                 self.catalog.scroll = self.catalog.scroll.clamp(0.0, max_scroll);
                 self.list_view = Some([list_top, list_bottom, max_scroll]);
-                let _ = clouds_str;
 
                 ui.set_clip(Some([
                     content_x - 2.0,
@@ -5573,61 +5496,6 @@ impl Launcher {
                         (s.horizon.resolution_scale as i32 + delta).clamp(25, 200) as u32
                 });
             }
-            Some(Action::RenderDistDelta(delta)) => {
-                self.modify_game_settings(|s| {
-                    s.render_distance = (s.render_distance + delta).clamp(2, 32);
-                });
-            }
-            Some(Action::SimDistDelta(delta)) => {
-                self.modify_game_settings(|s| {
-                    s.simulation_distance = (s.simulation_distance + delta).clamp(5, 32);
-                });
-            }
-            Some(Action::FovDelta(delta)) => {
-                self.modify_game_settings(|s| {
-                    s.fov = (s.fov + delta).clamp(30.0, 110.0);
-                });
-            }
-            Some(Action::CycleMaxFps) => {
-                self.modify_game_settings(|s| {
-                    s.max_fps = match s.max_fps {
-                        0..=45 => 60,
-                        46..=75 => 90,
-                        76..=105 => 120,
-                        106..=200 => 260,
-                        _ => 30,
-                    };
-                });
-            }
-            Some(Action::CycleGraphicsPreset) => {
-                self.modify_game_settings(|s| {
-                    s.graphics_preset = match s.graphics_preset.as_str() {
-                        "fast" => "fancy".into(),
-                        "fancy" => "fabulous".into(),
-                        _ => "fast".into(),
-                    };
-                });
-            }
-            Some(Action::ToggleVsync) => {
-                self.modify_game_settings(|s| s.vsync = !s.vsync);
-            }
-            Some(Action::ToggleSmoothLighting) => {
-                self.modify_game_settings(|s| s.smooth_lighting = !s.smooth_lighting);
-            }
-            Some(Action::CycleClouds) => {
-                self.modify_game_settings(|s| {
-                    s.clouds = match s.clouds.as_str() {
-                        "false" => "fast".into(),
-                        "fast" => "true".into(),
-                        _ => "false".into(),
-                    };
-                });
-            }
-            Some(Action::ToggleMenuBlur) => {
-                self.modify_game_settings(|s| {
-                    s.menu_blur = if s.menu_blur > 0 { 0 } else { 4 };
-                });
-            }
             // Experimental settings mutations
             Some(Action::ToggleSuperPerf) => {
                 self.catalog.config.super_perf_mode = !self.catalog.config.super_perf_mode;
@@ -6949,18 +6817,6 @@ impl Launcher {
                     option.set(s, (t * option.max() as f32).round() as i32)
                 });
             }
-            Action::RenderDistDelta(_) => {
-                let rd = (2.0 + t * 30.0).round() as i32;
-                self.modify_game_settings(|s| s.render_distance = rd.clamp(2, 32));
-            }
-            Action::SimDistDelta(_) => {
-                let sd = (5.0 + t * 27.0).round() as i32;
-                self.modify_game_settings(|s| s.simulation_distance = sd.clamp(5, 32));
-            }
-            Action::FovDelta(_) => {
-                let fov = (30.0 + t * 80.0).round();
-                self.modify_game_settings(|s| s.fov = fov.clamp(30.0, 110.0));
-            }
             Action::TouchSensDelta(_) => {
                 let v = ((0.10 + t * 2.90) * 100.0).round() / 100.0;
                 self.modify_touch_settings(|ts| ts.sensitivity = v.clamp(0.10, 3.0));
@@ -7168,14 +7024,6 @@ fn format_downloads(n: u64) -> String {
         format!("{:.1}K", n as f64 / 1_000.0)
     } else {
         n.to_string()
-    }
-}
-
-fn capitalize(s: &str) -> String {
-    let mut chars = s.chars();
-    match chars.next() {
-        Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
-        None => String::new(),
     }
 }
 
