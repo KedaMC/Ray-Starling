@@ -1144,8 +1144,8 @@ impl Loading {
 
     fn menu_action(&mut self, event_loop: &dyn EventLoopCtl, action: Action) {
         match action {
-            Action::Quit => event_loop.exit(),
-            Action::Launcher => {
+            // Quit Game goes back to Starling's launcher (ha_launcher) on Android.
+            Action::Quit => {
                 #[cfg(target_os = "android")]
                 crate::ha_launcher::back_to_launcher();
                 event_loop.exit();

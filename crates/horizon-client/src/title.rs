@@ -411,9 +411,6 @@ pub enum Action {
         dir: PathBuf,
         selected: Vec<String>,
     },
-    /// Starling on Android: back to the launcher (Horizon Android's, `ha_launcher`), where the
-    /// instance that opens directly is chosen.
-    Launcher,
 }
 pub struct Title {
     rule_registry: std::sync::Arc<crate::gamerules::RuleRegistry>,
@@ -2481,7 +2478,6 @@ Would you like to enable the Narrator or visit the Accessibility Settings?",
                 self.mode = Mode::Account(account::Screen::default());
                 Action::None
             }
-            (Mode::Main, Some(81)) => Action::Launcher,
             (Mode::Account(screen), Some(id)) => {
                 if screen.click(id, h) {
                     self.mode = Mode::Main;

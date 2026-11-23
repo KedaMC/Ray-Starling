@@ -226,10 +226,12 @@ impl Game<'_> {
         }
         self.mobile.controls.settings = self.settings.touch.clone();
         self.mobile_sync_resolution_scale();
-        self.settings.touch.virtual_mouse_hidden = true;
-        self.mobile.controls.settings.virtual_mouse_hidden = true;
-        self.mobile.ui.menu_direct_pointer = true;
-        self.mobile.ui.goy_in_game_mouse = false;
+        // A virtual mouse the player turned on starts visible; otherwise it starts hidden.
+        let hidden = !self.mobile.controls.settings.virtual_mouse_enabled;
+        self.settings.touch.virtual_mouse_hidden = hidden;
+        self.mobile.controls.settings.virtual_mouse_hidden = hidden;
+        self.mobile.ui.menu_direct_pointer = hidden;
+        self.mobile.ui.goy_in_game_mouse = !hidden;
         self.mobile
             .ui
             .refresh_presets_cache(self.mobile.controls.settings.control_style);
@@ -1604,9 +1606,11 @@ impl Game<'_> {
                     let next = !self.mobile.controls.settings.virtual_mouse_enabled;
                     self.mobile.controls.settings.virtual_mouse_enabled = next;
                     self.mobile.ui.pointer_off = !next;
-                    self.mobile.ui.menu_direct_pointer = true;
-                    self.mobile.controls.settings.virtual_mouse_hidden = true;
-                    self.mobile.ui.goy_in_game_mouse = false;
+                    // Turning it on shows the pointer at once (menus and gameplay), so it can be
+                    // seen and moved; turning it off hides it again.
+                    self.mobile.controls.settings.virtual_mouse_hidden = !next;
+                    self.mobile.ui.menu_direct_pointer = !next;
+                    self.mobile.ui.goy_in_game_mouse = next;
                     let _ = self.mobile.controls.settings.save();
                     self.android_sync_pointer();
                 }
@@ -1686,17 +1690,6 @@ impl Game<'_> {
                 InGameMenuAction::ForceKill => {
                     let _ = self.mobile.controls.settings.save();
                     std::process::exit(0);
-                }
-                // As the pause menu's Launcher row: a world saves and the game ends as Quit does,
-                // and the app starts again in the launcher (ha_launcher).
-                InGameMenuAction::OpenLauncher => {
-                    #[cfg(target_os = "android")]
-                    crate::ha_launcher::back_to_launcher();
-                    if self.title.is_some() || self.player.is_none() {
-                        events.exit();
-                    } else {
-                        self.begin_closing_save(true)?;
-                    }
                 }
                 InGameMenuAction::OpenLogs => {
                     // Logs are private to the app; the SAF provider shares the Reports

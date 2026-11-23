@@ -26,8 +26,8 @@ impl Game<'_> {
         match action {
             // A splitscreen player's title never ends the process (P1's does).
             Action::Quit if self.options.split_guest => {}
-            Action::Quit => event_loop.exit(),
-            Action::Launcher => {
+            // Quit Game goes back to Starling's launcher (ha_launcher) on Android.
+            Action::Quit => {
                 #[cfg(target_os = "android")]
                 crate::ha_launcher::back_to_launcher();
                 event_loop.exit();

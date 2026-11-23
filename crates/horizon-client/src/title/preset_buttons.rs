@@ -99,8 +99,6 @@ impl Title {
                 if crate::accounts::in_game() {
                     buttons.push(b(4.0, 4.0, 120.0, &account::main_label(), true, 80));
                 }
-                // Starling on Android: the way back to the launcher is the control hub's "H"
-                // (android_control_ui's Launcher), from any screen.
                 buttons
             }
             Mode::Select { worlds, selected } => {

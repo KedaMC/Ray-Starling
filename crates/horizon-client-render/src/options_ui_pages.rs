@@ -110,53 +110,45 @@ impl OptionsUi {
         } else {
             open("horizon.pages.open.agent", Page::Agent)
         };
-        let mut rows: Vec<Row> = vec![
-            Row::Buttons(
-                open("horizon.pages.open.graphics", Page::Graphics),
-                Some(open("horizon.pages.open.shader_packs", Page::ShaderPacks)),
-            ),
-            Row::Buttons(
-                open("horizon.pages.open.extras", Page::Extras),
-                Some(open("horizon.pages.open.mods", Page::NativeGame)),
-            ),
-            Row::Buttons(
-                open(
-                    "horizon.pages.open.split_setup",
-                    if self.split_guest {
-                        Page::SplitProfiles
-                    } else {
-                        Page::SplitSetup
-                    },
-                ),
-                None,
-            ),
-            Row::Buttons(ai, None),
+        let split = if self.split_guest {
+            Page::SplitProfiles
+        } else {
+            Page::SplitSetup
+        };
+        let mut buttons: Vec<Widget> = vec![
+            open("horizon.pages.open.graphics", Page::Graphics),
+            open("horizon.pages.open.shader_packs", Page::ShaderPacks),
+            open("horizon.pages.open.extras", Page::Extras),
+            open("horizon.pages.open.mods", Page::NativeGame),
+            open("horizon.pages.open.split_setup", split),
+            ai,
         ];
         if !s.extras.no_ai {
-            rows.push(Row::Buttons(
-                self.extra_button(s, crate::extras::Item::NoAi),
-                None,
-            ));
+            buttons.push(self.extra_button(s, crate::extras::Item::NoAi));
         }
-        rows.push(Row::Buttons(
-            open("horizon.pages.open.pvp", Page::Pvp),
-            Some(open("horizon.pages.open.studio", Page::Studio)),
-        ));
-        rows.push(Row::Buttons(open("horizon.mods.browse", Page::ModBrowser), None));
-        self.added_entries(&mut rows);
+        buttons.push(open("horizon.pages.open.pvp", Page::Pvp));
+        buttons.push(open("horizon.pages.open.studio", Page::Studio));
+        buttons.push(open("horizon.mods.browse", Page::ModBrowser));
+        buttons.extend(Self::added_entries());
+        // Two to a row; an odd last button takes the whole row so the list has no ragged edge.
+        let mut buttons = buttons.into_iter();
+        let mut rows = Vec::new();
+        while let Some(first) = buttons.next() {
+            rows.push(match buttons.next() {
+                Some(second) => Row::Buttons(first, Some(second)),
+                None => Row::Buttons(Widget { w: 310.0, ..first }, None),
+            });
+        }
         rows
     }
 
-    /// The entries of the pages registered for Horizon Settings, two to a row like the engine's.
-    fn added_entries(&self, rows: &mut Vec<Row>) {
-        let mut entries = registered()
+    /// The entries of the pages registered for Horizon Settings, laid out with the engine's own.
+    fn added_entries() -> impl Iterator<Item = Widget> {
+        registered()
             .iter()
             .enumerate()
             .filter(|(_, page)| page.place() == added::Place::HorizonSettings)
-            .map(|(i, page)| button(0.0, 0.0, 150.0, tr(page.title()), Act::Push(Page::Added(i))));
-        while let Some(first) = entries.next() {
-            rows.push(Row::Buttons(first, entries.next()));
-        }
+            .map(|(i, page)| button(0.0, 0.0, 150.0, tr(page.title()), Act::Push(Page::Added(i))))
     }
 
     /// A registered page's rows, asked of it each time the page is drawn.
