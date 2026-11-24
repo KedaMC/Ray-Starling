@@ -897,7 +897,6 @@ pub enum Opt {
     EntityDistance,
     EntityShadows,
     BiomeBlend,
-    Preset,
     Mipmaps,
     WeatherRadius,
     ChunkFade,
