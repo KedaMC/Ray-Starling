@@ -10479,7 +10479,9 @@ mod tests {
         let main = pushes(&mut ui);
         // The Online button remains first; Starling Settings follows it.
         assert_eq!(main[1], Page::Horizon);
-        assert_eq!(&main[2..4], [Page::Skin, Page::Sound]);
+        assert_eq!(main[2], Page::Sound);
+        // Skin Customization has no button here: the title screen has its own.
+        assert!(!main.contains(&Page::Skin));
         assert!(main.contains(&Page::Credits));
         // Video Settings... is vanilla's own page; Graphics lives under Starling Settings.
         assert!(main.contains(&Page::Video) && !main.contains(&Page::Graphics));
@@ -10920,15 +10922,14 @@ mod tests {
         assert_eq!(ui.take_skin_actions(), [SkinAction::OpenFolder]);
         // The layers and Main Hand follow the skin.
         find(&mut ui, Act::Cycle(Opt::MainHand));
-        // The menus before the game open the page too, with only the layers and Main Hand: the
+        // The menus before the game show the page with only the layers and Main Hand: the
         // name and skin are the game's own options'.
         let mut menu = OptionsUi::default();
         let (main, ..) = menu.layout(&s, size.0, size.1);
-        assert!(main.iter().any(|w| matches!(
+        assert!(!main.iter().any(|w| matches!(
             &w.kind,
             WKind::Button {
                 act: Act::Push(Page::Skin),
-                active: true,
                 ..
             }
         )));

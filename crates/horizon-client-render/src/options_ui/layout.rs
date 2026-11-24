@@ -150,8 +150,6 @@ impl OptionsUi {
                     Act::Push(Page::Online),
                 ));
                 let entries = [
-                    // Everywhere for the layers and Main Hand; `skin_page` adds the name and skin.
-                    ("options.skinCustomisation", Some(Page::Skin)),
                     ("options.sounds", Some(Page::Sound)),
                     // Video Settings... is vanilla's page; Graphics and Shader Packs live
                     // under Starling Settings.
