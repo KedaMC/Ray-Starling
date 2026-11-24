@@ -1,5 +1,4 @@
-//! Controllers through gilrs, or Android's events on a phone (Horizon's own;
-//! docs/controllers.md): the active pad's state each loop iteration, its
+//! Android's controllers (Horizon's own; docs/controllers.md): the active pad's state each loop iteration, its
 //! button edges dispatched as the vanilla key mappings they are bound to, the
 //! left stick as an analog move vector and the right stick turning the view.
 //! `horizon-ctl pad` injects a virtual pad on top of the real one.
@@ -52,8 +51,8 @@ pub(super) struct Pads {
     pub(super) feed: Option<PadState>,
     /// The pad behind `feed`.
     feed_source: Option<PadId>,
-    /// The real controllers and the DualSense's output, or Android's controllers.
-    #[cfg(any(feature = "controllers", target_os = "android"))]
+    /// Android's controllers.
+    #[cfg(target_os = "android")]
     devices: hardware::Devices,
     /// The virtual pad of `horizon-ctl pad`.
     injected: PadState,
@@ -145,8 +144,6 @@ struct Context {
 
 mod capture;
 mod guide;
-#[cfg(feature = "controllers")]
-mod hardware;
 #[cfg(test)]
 mod parity_tests;
 mod radial_play;
@@ -187,7 +184,7 @@ enum Connection {
 }
 
 /// What a controller did since the last frame.
-#[cfg_attr(not(feature = "controllers"), allow(dead_code))]
+#[allow(dead_code)]
 pub(in crate::game) enum PadEvent {
     Press(PadId, Button),
     /// Disconnected (out of battery, unplugged, out of range).
@@ -198,15 +195,12 @@ pub(in crate::game) enum PadEvent {
     Back(PadId),
 }
 
-/// Android's controllers, from the system's events: gilrs (the `controllers` feature) has no
-/// Android backend.
-#[cfg(all(target_os = "android", not(feature = "controllers")))]
+/// Android's controllers, from the system's events.
+#[cfg(target_os = "android")]
 #[path = "android.rs"]
 mod hardware;
 
-/// The splitscreen's pad router where there are no gilrs pads to route (the server build, Android):
-/// no pad events, no pad to lend.
-#[cfg(not(feature = "controllers"))]
+/// The splitscreen's pad router: no pad events, no pad to lend.
 mod no_router {
     use super::{PadEvent, Pads};
     use horizon_client::gamepad::PadState;
@@ -251,9 +245,8 @@ mod no_router {
     }
 }
 
-/// A build without the `controllers` feature (the server build, which must not need libudev): no
-/// hardware pads, only `horizon-ctl pad`'s virtual one.
-#[cfg(not(any(feature = "controllers", target_os = "android")))]
+/// No hardware pads off Android, only `horizon-ctl pad`'s virtual one.
+#[cfg(not(target_os = "android"))]
 mod hardware {
     use super::{super::Game, Pads};
     use horizon_client::gamepad::{PadState, Pulse, Rumble};

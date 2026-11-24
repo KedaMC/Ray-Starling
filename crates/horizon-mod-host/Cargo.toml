@@ -27,9 +27,8 @@ sha2 = "0.10"
 workspace = true
 
 [features]
-default = ["audio", "controllers", "horizon-extras"]
+default = ["audio", "horizon-extras"]
 audio = ["horizon-client/audio"]
-controllers = ["horizon-client/controllers"]
 horizon-extras = ["horizon-client/horizon-extras"]
 testing = ["horizon-client/testing"]
 friends = ["horizon-client/friends"]

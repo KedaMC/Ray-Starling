@@ -13,8 +13,6 @@ horizon-client-core = { path = "../horizon-client-core" }
 winit = "0.30.13"
 log = "0.4"
 png = "0.18"
-# The DualSense's trigger effects (the `controllers` feature).
-horizon-dualsense = { path = "../horizon-dualsense", optional = true }
 
 [dev-dependencies]
 # The window icon test decodes Horizon's icon.
@@ -23,9 +21,6 @@ horizon-theme = { path = "../horizon-theme" }
 # No Android backend: the platform's clipboard stands in there (clipboard.rs).
 [target.'cfg(not(target_os = "android"))'.dependencies]
 arboard = { version = "3.6.1", default-features = false, features = ["wayland-data-control"] }
-
-[features]
-controllers = []
 
 [lints]
 workspace = true

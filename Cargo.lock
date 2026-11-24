@@ -1849,7 +1849,6 @@ dependencies = [
  "crc32fast",
  "flate2",
  "fs4",
- "gilrs",
  "glam",
  "horizon-anticheat",
  "horizon-assets",
@@ -1862,7 +1861,6 @@ dependencies = [
  "horizon-command",
  "horizon-core",
  "horizon-cosmetics",
- "horizon-dualsense",
  "horizon-engine-slots",
  "horizon-friends",
  "horizon-game-discovery",
@@ -1938,7 +1936,6 @@ version = "0.1.0"
 dependencies = [
  "arboard",
  "horizon-client-core",
- "horizon-dualsense",
  "horizon-engine-slots",
  "horizon-mod-api-macros",
  "horizon-theme",
@@ -1959,7 +1956,6 @@ dependencies = [
  "flate2",
  "fs4",
  "getrandom 0.3.4",
- "gilrs",
  "glam",
  "horizon-anticheat",
  "horizon-assets",
@@ -1969,7 +1965,6 @@ dependencies = [
  "horizon-client-render",
  "horizon-command",
  "horizon-core",
- "horizon-dualsense",
  "horizon-engine-slots",
  "horizon-game-discovery",
  "horizon-guest-stack",
@@ -2126,15 +2121,6 @@ dependencies = [
  "horizon-platform",
  "log",
  "serde_json",
-]
-
-[[package]]
-name = "horizon-dualsense"
-version = "0.1.0"
-dependencies = [
- "cpal",
- "hidapi",
- "log",
 ]
 
 [[package]]

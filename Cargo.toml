@@ -18,7 +18,6 @@ members = [
     "crates/horizon-mod-runtime",
     "crates/horizon-mod-render",
     "docs/modding/examples",
-    "crates/horizon-dualsense",
     "crates/horizon-narrator",
     "crates/horizon-threads",
     "crates/horizon-hdr",

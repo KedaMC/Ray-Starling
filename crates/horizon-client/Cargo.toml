@@ -90,10 +90,6 @@ horizon-telemetry = { path = "../horizon-telemetry", default-features = false }
 horizon-bench = { path = "../horizon-bench" }
 crc32fast = "1"
 zip = { version = "9.1.3", default-features = false, features = ["deflate"] }
-# Controllers (evdev + libudev on Linux, IOKit on macOS, Windows.Gaming.Input); the `controllers` feature.
-gilrs = { version = "0.11", optional = true }
-# The DualSense's rumble, adaptive triggers and lights over HID (gilrs only reads it).
-horizon-dualsense = { path = "../horizon-dualsense", optional = true }
 # HTTPS to the Minecraft services (online-mode session join).
 ureq = { version = "2", default-features = false, features = ["tls"] }
 unicode-bidi = "0.3.18"
@@ -144,19 +140,17 @@ wgpu = { version = "30.0.1", default-features = false, features = ["gles"] }
 # Source retention only: not compiled/tested on the fork; incompatible with typed residency.
 # Do not enable (including via --all-features); integration is tracked in #3491.
 upstream-parallel-mobs = []
-default = ["audio", "controllers", "horizon-extras"]
+default = ["audio", "horizon-extras"]
 # Scoped trait-mod installation for a mod's own tests.
 testing = []
-# Sound output. Without it (and `controllers`) the program links neither libasound nor libudev on
+# Sound output. Without it the program links no libasound on
 # Linux: the server build (`--no-default-features`, released as horizon-engine; docs/server.md).
 audio = ["horizon-client-render/audio", "horizon-client-lib/audio"]
-# Controllers: gilrs, and the DualSense's own output. Without it only `horizon-ctl pad`'s virtual pad.
-controllers = ["horizon-client-lib/controllers", "dep:gilrs", "dep:horizon-dualsense", "horizon-client-input/controllers"]
 # Horizon's own extras over the vanilla game, for a fork that wants them out (docs/forking.md):
 # cosmetics and emotes, the "Horizon player" presence, the official server added to
 # the server list, the Horizon Settings and Mods pages and Play with Friends, and ray tracing on
 # request (`HORIZON_RAY_TRACING=1`). Players always get them; there is no switch. `grep -rn horizon-extras crates/` lists
-# every place it gates. Without it (`--no-default-features --features audio,controllers`) the
+# every place it gates. Without it (`--no-default-features --features audio`) the
 # client is best effort: CI builds only the default.
 horizon-extras = ["horizon-client-render/horizon-extras", "friends"]
 # Play with Friends: sharing a world behind an invite code (game/friends.rs). Joining one is
