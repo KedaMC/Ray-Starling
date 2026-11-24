@@ -10490,7 +10490,6 @@ mod tests {
             pushes(&mut ui),
             [
                 Page::Graphics,
-                Page::ShaderPacks,
                 Page::Extras,
                 Page::NativeGame,
                 Page::SplitSetup,

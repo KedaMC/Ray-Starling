@@ -103,7 +103,7 @@ impl OptionsUi {
     /// Horizon Settings: its pages, then the pages crates registered for it.
     pub(super) fn horizon_rows(&self, s: &Settings) -> Vec<Row> {
         // Two to a row, as vanilla's OptionsList.addSmall lays out buttons; each opens
-        // one of Starling's settings pages. Graphics and Shader Packs open only from here.
+        // one of Starling's settings pages. Graphics opens only from here.
         let open = |key: &str, page: Page| button(0.0, 0.0, 150.0, tr(key), Act::Push(page));
         let ai = if s.extras.no_ai {
             self.extra_button(s, crate::extras::Item::NoAi)
@@ -117,7 +117,6 @@ impl OptionsUi {
         };
         let mut buttons: Vec<Widget> = vec![
             open("horizon.pages.open.graphics", Page::Graphics),
-            open("horizon.pages.open.shader_packs", Page::ShaderPacks),
             open("horizon.pages.open.extras", Page::Extras),
             open("horizon.pages.open.mods", Page::NativeGame),
             open("horizon.pages.open.split_setup", split),
@@ -128,17 +127,22 @@ impl OptionsUi {
         }
         buttons.push(open("horizon.pages.open.pvp", Page::Pvp));
         buttons.push(open("horizon.pages.open.studio", Page::Studio));
-        buttons.push(open("horizon.mods.browse", Page::ModBrowser));
-        buttons.extend(Self::added_entries());
         // Two to a row; an odd last button takes the whole row so the list has no ragged edge.
-        let mut buttons = buttons.into_iter();
+        let pair = |buttons: Vec<Widget>, rows: &mut Vec<Row>| {
+            let mut buttons = buttons.into_iter();
+            while let Some(first) = buttons.next() {
+                rows.push(match buttons.next() {
+                    Some(second) => Row::Buttons(first, Some(second)),
+                    None => Row::Buttons(Widget { w: 310.0, ..first }, None),
+                });
+            }
+        };
         let mut rows = Vec::new();
-        while let Some(first) = buttons.next() {
-            rows.push(match buttons.next() {
-                Some(second) => Row::Buttons(first, Some(second)),
-                None => Row::Buttons(Widget { w: 310.0, ..first }, None),
-            });
-        }
+        pair(buttons, &mut rows);
+        // Browse Mods always has a row of its own, as wide as two buttons.
+        let browse = open("horizon.mods.browse", Page::ModBrowser);
+        rows.push(Row::Buttons(Widget { w: 310.0, ..browse }, None));
+        pair(Self::added_entries().collect(), &mut rows);
         rows
     }
 
