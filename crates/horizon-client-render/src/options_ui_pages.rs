@@ -127,21 +127,16 @@ impl OptionsUi {
         }
         buttons.push(open("horizon.pages.open.pvp", Page::Pvp));
         buttons.push(open("horizon.pages.open.studio", Page::Studio));
-        // Two to a row; an odd last button takes the whole row so the list has no ragged edge.
+        buttons.push(open("horizon.mods.browse", Page::ModBrowser));
+        // Every button keeps the same width, so an odd last one sits alone on the left.
         let pair = |buttons: Vec<Widget>, rows: &mut Vec<Row>| {
             let mut buttons = buttons.into_iter();
             while let Some(first) = buttons.next() {
-                rows.push(match buttons.next() {
-                    Some(second) => Row::Buttons(first, Some(second)),
-                    None => Row::Buttons(Widget { w: 310.0, ..first }, None),
-                });
+                rows.push(Row::Buttons(first, buttons.next()));
             }
         };
         let mut rows = Vec::new();
         pair(buttons, &mut rows);
-        // Browse Mods always has a row of its own, as wide as two buttons.
-        let browse = open("horizon.mods.browse", Page::ModBrowser);
-        rows.push(Row::Buttons(Widget { w: 310.0, ..browse }, None));
         pair(Self::added_entries().collect(), &mut rows);
         rows
     }
