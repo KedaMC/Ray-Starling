@@ -340,7 +340,6 @@ impl Split<'_> {
         let guest = &mut self.guests[i];
         // Its profile page closes as it goes in.
         guest.game.set_screen(crate::game::Screen::Playing);
-        settings.extras.agent_control &= guest.game.options.control.is_some();
         guest.game.settings = settings;
         guest.game.options.player_name = Some(name.clone());
         guest.game.apply_settings();
@@ -467,15 +466,13 @@ impl Split<'_> {
         options.split_guest = true;
         options.offscreen = true;
         options.paced_by_split = true;
-        // P1's socket (`--control` or Agent Control) + the seat: every game in this process
+        // P1's socket (`--control`) + the seat: every game in this process
         // would otherwise take the one default endpoint, P1's.
         options.control = host.control.as_ref().map(|c| {
             let mut p = c.path().as_os_str().to_owned();
             p.push(seat.to_string());
             p.into()
         });
-        let mut settings = settings;
-        settings.extras.agent_control &= options.control.is_some();
         // `options.resources` is P1's overlay when a pack is on: never the vanilla root, as a
         // reload would rebuild that overlay out of itself.
         let vanilla_root = host.vanilla_root();

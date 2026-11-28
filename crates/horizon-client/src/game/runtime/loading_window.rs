@@ -567,7 +567,7 @@ pub(super) fn start_game<'a>(
     game.refresh_loop_context()?;
     // After the mods: their templates are among the ids it lists.
     game.preload_registries();
-    game.start_agent_control()?;
+    game.start_control_socket()?;
     if let Some(scenario) = game.options.benchmark.clone() {
         let control = game
             .control

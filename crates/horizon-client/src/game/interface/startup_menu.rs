@@ -1046,12 +1046,8 @@ impl Loading {
                         audio.preview(source, volume);
                     }
                 }
-                // The startup menu runs before the game opens a control socket, and has no music
-                // tracks to list or play.
-                Event::CopyAgentDetails
-                | Event::ToggleRecording
-                | Event::ExportRepro
-                | Event::ListMusicTracks
+                // The startup menu has no music tracks to list or play.
+                Event::ListMusicTracks
                 | Event::PlayMusicTrack(..) => {}
                 Event::OpenStudioFolder => {
                     let dir = std::path::PathBuf::from("recordings");

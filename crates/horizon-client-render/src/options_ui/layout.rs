@@ -48,15 +48,6 @@ impl OptionsUi {
     pub fn layout_changed(&mut self) {
         self.relayout();
     }
-    /// The Agent page's status lines and recording flag, from the game's
-    /// poll: the page lays out again only when one of them changed.
-    pub fn set_agent_status(&mut self, status: Vec<String>, recording: bool) {
-        if self.agent_status != status || self.agent_recording != recording {
-            self.agent_status = status;
-            self.agent_recording = recording;
-            self.relayout();
-        }
-    }
     /// The calibration page's lines and buttons, from the game while it shows: the page lays out
     /// again only when one of them changed, so a tap lands on the buttons it shows.
     pub fn set_calibrate(&mut self, notes: Vec<String>, buttons: Vec<String>) {

@@ -501,8 +501,6 @@ impl Game<'_> {
                     self.switch_mods(false);
                     self.sync_native_switches();
                     self.sync_pregen_option();
-                    self.sync_agent_control();
-                    self.ui.options.agent_status = self.agent_status_lines();
                 }
                 // Every step of a drag: applied, and written once when the slider is let go
                 // (`Changed`).
@@ -517,14 +515,6 @@ impl Game<'_> {
                     self.audio.preview(source, volume);
                 }
                 Event::Volume(..) => {}
-                Event::CopyAgentDetails => {
-                    use horizon_client::clipboard::Clipboard;
-                    let text = self.agent_details();
-                    self.clipboard.set(&text);
-                }
-                // The AI Agent page's repro buttons (game/runtime/repro.rs).
-                Event::ToggleRecording => self.toggle_recording_key(),
-                Event::ExportRepro => self.export_repro_key(),
                 // The Music page: the situations' tracks, and playing one now.
                 Event::ListMusicTracks => self.ui.options.music_groups = self.music_groups(),
                 Event::PlayMusicTrack(event, track) => self.play_music_track(&event, &track),

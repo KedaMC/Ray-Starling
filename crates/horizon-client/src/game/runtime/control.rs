@@ -232,7 +232,6 @@ impl Game<'_> {
             // Once per line received, not once per handler: a deferred `ui`
             // comes back through `ui_wait` and must not be traced twice.
             self.note_socket_line(&request.line);
-            self.agent_command_seen();
             self.answer(request, event_loop);
             if self.pending_save.is_some() {
                 break;
@@ -242,13 +241,6 @@ impl Game<'_> {
         // and still wants its events.
         if self.control.is_some() || self.repro.recording_active() {
             self.watch_events();
-        }
-        if self.screen == Screen::Options
-            && self.ui.options.page() == horizon_client::options_ui::Page::Agent
-        {
-            self.ui
-                .options
-                .set_agent_status(self.agent_status_lines(), self.repro.recording_active());
         }
     }
 
@@ -1266,7 +1258,6 @@ impl Game<'_> {
                     "pvp" => Page::Pvp,
                     "credits" => Page::Credits,
                     "horizon" => Page::Horizon,
-                    "agent" => Page::Agent,
                     "skin" => Page::Skin,
                     other => return Err(format!("unknown options page {other}").into()),
                 };

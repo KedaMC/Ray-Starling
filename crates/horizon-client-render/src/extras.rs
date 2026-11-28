@@ -99,11 +99,6 @@ pub struct Extras {
     pub chat_animation: bool,
     /// The indicator bar at the left of a chat line (on by default, as vanilla).
     pub chat_indicator: bool,
-    /// No AI: every AI feature hidden and off (`horizon_core::no_ai`; the launcher writes it too).
-    pub no_ai: bool,
-    /// Agents may control the game the player starts: it opens its control socket for
-    /// horizon-ctl and MCP clients (off by default; an agent's own launch always opens it).
-    pub agent_control: bool,
     /// F3+R and F3+E start/stop a repro recording and write its bundle (off by
     /// default: a recording copies the world).
     pub repro_keys: bool,
@@ -173,8 +168,6 @@ impl Default for Extras {
             emote_key: crate::keybinds::KeyBinds::default_of("key.emote").into(),
             chat_animation: false,
             chat_indicator: true,
-            no_ai: false,
-            agent_control: false,
             repro_keys: false,
             splitscreen: false,
             splitscreen_two: 0,
@@ -269,8 +262,6 @@ impl Extras {
                 EMOTE_KEY if value.starts_with("key.") => e.emote_key = value.to_owned(),
                 "chatAnimation" => e.chat_animation = flag(e.chat_animation),
                 "chatIndicator" => e.chat_indicator = flag(e.chat_indicator),
-                horizon_core::no_ai::KEY => e.no_ai = flag(e.no_ai),
-                "agentControl" => e.agent_control = flag(e.agent_control),
                 "reproKeys" => e.repro_keys = flag(e.repro_keys),
                 "splitscreen" => e.splitscreen = flag(e.splitscreen),
                 "splitscreenTwo" => e.splitscreen_two = value.parse().unwrap_or(0).min(2),
@@ -300,7 +291,7 @@ impl Extras {
     }
     pub fn serialize(&self) -> String {
         let mut text = format!(
-            "packBrowser:{}\npregen:{}\nfullbright:{}\ndynamicLights:{}\nzoom:{}\nzoomKey:{}\nzoomLevel:{}\nzoomSmooth:{}\nzoomSensitivity:{}\nlodZoomDetail:{}\nfps:{}\nfpsCorner:{}\nfpsLows:{}\nkeystrokes:{}\nkeystrokesCorner:{}\nkeystrokesCps:{}\nmovedToMods:{}\nminimap:{}\nminimapCorner:{}\nminimapSize:{}\nminimapShape:{}\nminimapZoom:{}\nminimapRotate:{}\nautoReconnect:{}\nuiSoundReserve:{}\nownNameTag:{}\nskipModdedSplashesIfVanillaModified:{}\nhideBlockParticles:{}\nmouseTweaks:{}\nmouseTweaksWheel:{}\nsort:{}\nsortKey:{}\nchatAnimation:{}\nchatIndicator:{}\n{}:{}\nagentControl:{}\nreproKeys:{}\nsplitscreen:{}\nsplitscreenTwo:{}\nsplitscreenThree:{}\nsplitscreenNames:{}\nwheelCyclesListSettings:{}\nmusicOff:{}\nmusicPage:{}\n{}:{}\n",
+            "packBrowser:{}\npregen:{}\nfullbright:{}\ndynamicLights:{}\nzoom:{}\nzoomKey:{}\nzoomLevel:{}\nzoomSmooth:{}\nzoomSensitivity:{}\nlodZoomDetail:{}\nfps:{}\nfpsCorner:{}\nfpsLows:{}\nkeystrokes:{}\nkeystrokesCorner:{}\nkeystrokesCps:{}\nmovedToMods:{}\nminimap:{}\nminimapCorner:{}\nminimapSize:{}\nminimapShape:{}\nminimapZoom:{}\nminimapRotate:{}\nautoReconnect:{}\nuiSoundReserve:{}\nownNameTag:{}\nskipModdedSplashesIfVanillaModified:{}\nhideBlockParticles:{}\nmouseTweaks:{}\nmouseTweaksWheel:{}\nsort:{}\nsortKey:{}\nchatAnimation:{}\nchatIndicator:{}\nreproKeys:{}\nsplitscreen:{}\nsplitscreenTwo:{}\nsplitscreenThree:{}\nsplitscreenNames:{}\nwheelCyclesListSettings:{}\nmusicOff:{}\nmusicPage:{}\n{}:{}\n",
             bool_text(self.pack_browser),
             bool_text(self.pregen),
             bool_text(self.fullbright),
@@ -339,9 +330,6 @@ impl Extras {
             self.sort_key,
             bool_text(self.chat_animation),
             bool_text(self.chat_indicator),
-            horizon_core::no_ai::KEY,
-            bool_text(self.no_ai),
-            bool_text(self.agent_control),
             bool_text(self.repro_keys),
             bool_text(self.splitscreen),
             self.splitscreen_two,
@@ -524,10 +512,7 @@ pub enum Item {
     ChatAnimation,
     /// The coloured bar at the left of a chat line.
     ChatIndicator,
-    /// Not on the Extras page: Horizon Settings shows No AI, its AI Agent page Agent Control.
-    NoAi,
-    AgentControl,
-    /// On the AI Agent page, next to Agent Control: the F3 recording shortcuts.
+    /// The F3 recording shortcuts.
     ReproKeys,
     /// On the Splitscreen settings page.
     Splitscreen,
@@ -581,8 +566,6 @@ impl Item {
             Item::MouseTweaksWheel => "horizon.extras.mouse_tweaks_wheel",
             Item::Sort => "horizon.extras.sort",
             Item::SortKey => "horizon.extras.sort_key",
-            Item::NoAi => "horizon.extras.no_ai",
-            Item::AgentControl => "horizon.extras.agent_control",
             Item::ReproKeys => "horizon.extras.repro_keys",
             Item::Splitscreen => "horizon.extras.splitscreen",
             Item::ChatAnimation => "horizon.extras.chat_animation",
@@ -606,8 +589,6 @@ impl Item {
             Item::MouseTweaksWheel => "horizon.extras.mouse_tweaks_wheel.tooltip",
             Item::Sort => "horizon.extras.sort.tooltip",
             Item::SortKey => "horizon.extras.sort_key.tooltip",
-            Item::NoAi => "horizon.extras.no_ai.tooltip",
-            Item::AgentControl => "horizon.extras.agent_control.tooltip",
             Item::ReproKeys => "horizon.extras.repro_keys.tooltip",
             Item::Splitscreen => "horizon.extras.splitscreen.tooltip",
             Item::ChatAnimation => "horizon.extras.chat_animation.tooltip",
@@ -642,8 +623,6 @@ impl Item {
             Item::SortKey => "Sort key",
             Item::ChatAnimation => "Smooth chat",
             Item::ChatIndicator => "Message indicator",
-            Item::NoAi => "No AI",
-            Item::AgentControl => "Agent Control",
             Item::ReproKeys => "Recording shortcuts",
             Item::Splitscreen => "Splitscreen",
             Item::PackBrowser => "Resource pack browser",
@@ -661,7 +640,7 @@ impl Item {
             ChatIndicator => ChatAnimation,
             Pvp(o) => return o.parent().map(Pvp),
             Fullbright | DynamicLights | OwnNameTag | HideBlockParticles | MouseTweaks | Sort
-            | AutoReconnect | NoAi | AgentControl | ReproKeys | Splitscreen | ChatAnimation
+            | AutoReconnect | ReproKeys | Splitscreen | ChatAnimation
             | MusicPage | PackBrowser | Pregen => {
                 return None;
             }
@@ -708,14 +687,8 @@ impl Item {
                 "A new chat line slides in from the left while it fades in, instead of appearing whole."
             }
             Item::ChatIndicator => "The coloured bar at the left of a chat line.",
-            Item::NoAi => {
-                "Hides and turns off every AI feature: agent control, horizon-ctl and the MCP servers. The launcher's switch too."
-            }
             Item::Splitscreen => {
                 "In a world, another controller can join as a new player: press A when it asks, then pick a profile and where to play."
-            }
-            Item::AgentControl => {
-                "Your own AI agent can play this game through horizon-ctl or an MCP client, on this computer only."
             }
             Item::ReproKeys => {
                 "F3+R starts or stops a repro recording and F3+E writes its bundle. Off by default: a recording copies the world."
@@ -760,8 +733,6 @@ impl Item {
             Item::Sort => e.sort,
             Item::ChatAnimation => e.chat_animation,
             Item::ChatIndicator => e.chat_indicator,
-            Item::NoAi => e.no_ai,
-            Item::AgentControl => e.agent_control,
             Item::ReproKeys => e.repro_keys,
             Item::Splitscreen => e.splitscreen,
             Item::PackBrowser => e.pack_browser,
@@ -797,8 +768,6 @@ impl Item {
             Item::Sort => e.sort = !e.sort,
             Item::ChatAnimation => e.chat_animation = !e.chat_animation,
             Item::ChatIndicator => e.chat_indicator = !e.chat_indicator,
-            Item::NoAi => e.no_ai = !e.no_ai,
-            Item::AgentControl => e.agent_control = !e.agent_control,
             Item::ReproKeys => e.repro_keys = !e.repro_keys,
             Item::Splitscreen => e.splitscreen = !e.splitscreen,
             Item::PackBrowser => e.pack_browser = !e.pack_browser,

@@ -1954,8 +1954,6 @@ pub enum Page {
     Horizon,
     /// Replay Studio: saved recordings browser and 3D video editor launcher.
     Studio,
-    /// AI Agent: agent control on or off, whether an agent is connected, the connection details.
-    Agent,
     /// SkinCustomizationScreen: the skin layers and Main Hand, and in the game's own options
     /// (`skin_page`) the player's name and own skin (`own_skin`) before them.
     Skin,
@@ -2042,7 +2040,6 @@ pub(crate) enum Act {
     AccessibilityHelp,
     /// Credits & Attribution's Credits button (WinScreen without the poem).
     Credits,
-    CopyAgentDetails,
     /// Skin Customization: the next skin of `skins/`, the other model, the system's file picker
     /// (phones), the folder, Ely.by's skins.
     SelectSkin(Option<String>),
@@ -2061,10 +2058,6 @@ pub(crate) enum Act {
     /// The chosen skin to the Microsoft account's profile; an Ely.by account's skin page.
     UploadSkin,
     ElySkinSite,
-    /// AI Agent: start or stop the repro recording.
-    ToggleRecording,
-    /// AI Agent: write the repro bundle now.
-    ExportRepro,
     /// The Music page: play this track of this event now.
     PlayMusicTrack(String, String),
     /// The Music page: turn this track off, or back on.
@@ -2302,12 +2295,6 @@ pub enum Event {
     Credits,
     /// PvP & HUD's Edit HUD: open the HUD editor over the game.
     HudEditor,
-    /// Copy how an agent connects (the AI Agent page).
-    CopyAgentDetails,
-    /// The AI Agent page's recording button: start or stop.
-    ToggleRecording,
-    /// The AI Agent page's export button.
-    ExportRepro,
     /// The narrator option changed (after its `Changed`): the option's
     /// `onValueUpdate`, `GameNarrator.updateNarratorStatus`.
     Narrator,
@@ -2437,8 +2424,6 @@ pub struct OptionsUi {
     pub calibration_window: Option<crate::hdr_calibration::WindowState>,
     pub split_setup: crate::split_ui::SplitUi,
     pub studio: crate::studio_ui::StudioUi,
-    /// The AI Agent page's status lines (set by the game while it shows).
-    pub agent_status: Vec<String>,
     pub diagnostics_status: Vec<String>,
     /// Starling's performance test on the Diagnostics page (game/starling/perf_lab.rs): its
     /// switches' labels, each a button (`Event::PerfLab` with its index), and the lines after
@@ -2449,8 +2434,6 @@ pub struct OptionsUi {
     /// buttons' labels (`Event::Calibrate` with its index), set by the game while it shows.
     pub calibrate_notes: Vec<String>,
     pub calibrate: Vec<String>,
-    /// A repro recording is running: the AI Agent page's button says stop.
-    pub agent_recording: bool,
     /// The Music page's groups (set by the game when it opens the page).
     pub music_groups: Vec<MusicGroup>,
     /// Keyboard focus: the interactive target currently focused.
@@ -2621,13 +2604,11 @@ impl Default for OptionsUi {
             calibration_window: None,
             split_setup: Default::default(),
             studio: Default::default(),
-            agent_status: Vec::new(),
             diagnostics_status: Vec::new(),
             perf_lab: Vec::new(),
             perf_lab_notes: Vec::new(),
             calibrate_notes: Vec::new(),
             calibrate: Vec::new(),
-            agent_recording: false,
             music_groups: Vec::new(),
             focus: None,
             focus_from_keyboard: false,
@@ -3985,7 +3966,6 @@ impl OptionsUi {
             Page::Credits => "credits_and_attribution.screen.title",
             Page::Horizon => "horizon.pages.settings",
             Page::Studio => "horizon.pages.studio",
-            Page::Agent => "horizon.pages.agent",
             Page::SplitProfiles => "horizon.pages.split_profiles",
             Page::SplitSetup => "horizon.pages.split_setup",
             Page::Music => "horizon.pages.music",
@@ -4359,44 +4339,6 @@ impl OptionsUi {
                 rows
             }
             Page::Horizon => self.horizon_rows(s),
-            Page::Agent => {
-                let mut rows = vec![Row::Buttons(
-                    self.extra_button(s, crate::extras::Item::AgentControl),
-                    Some(button(
-                        0.0,
-                        0.0,
-                        150.0,
-                        tr("horizon.agent.copy_details"),
-                        Act::CopyAgentDetails,
-                    )),
-                )];
-                rows.push(Row::Buttons(
-                    button(
-                        0.0,
-                        0.0,
-                        150.0,
-                        tr(if self.agent_recording {
-                            "horizon.agent.record_stop"
-                        } else {
-                            "horizon.agent.record_session"
-                        }),
-                        Act::ToggleRecording,
-                    ),
-                    Some(button(
-                        0.0,
-                        0.0,
-                        150.0,
-                        tr("horizon.agent.export_repro"),
-                        Act::ExportRepro,
-                    )),
-                ));
-                rows.push(Row::Buttons(
-                    self.extra_button(s, crate::extras::Item::ReproKeys),
-                    None,
-                ));
-                rows.extend(self.agent_status.iter().cloned().map(Row::Note));
-                rows
-            }
             Page::Skin => {
                 if self.wardrobe_saving() {
                     return Vec::new();
@@ -5712,7 +5654,6 @@ impl OptionsUi {
                         Act::HudEditor => events.push(Event::HudEditor),
                         Act::AccessibilityHelp => events.push(Event::AccessibilityHelp),
                         Act::Credits => events.push(Event::Credits),
-                        Act::CopyAgentDetails => events.push(Event::CopyAgentDetails),
                         Act::SelectSkin(file) => self.select_skin(file.clone()),
                         Act::WardrobeTab(capes) => self.select_wardrobe_tab(*capes),
                         Act::AutoRotateWardrobe => self.toggle_wardrobe_auto_rotate(),
@@ -5735,7 +5676,6 @@ impl OptionsUi {
                         Act::OpenSkinFolder => self.skin.actions.push(SkinAction::OpenFolder),
                         Act::UploadSkin => self.queue_skin_upload(),
                         Act::ElySkinSite => self.skin.actions.push(SkinAction::ElySite),
-                        Act::ToggleRecording => events.push(Event::ToggleRecording),
                         Act::DiagnosticsExport => events.push(Event::DiagnosticsExport),
                         Act::DiagnosticsOpen => events.push(Event::DiagnosticsOpen),
                         Act::DiagnosticsRecord => events.push(Event::DiagnosticsRecord),
@@ -5746,7 +5686,6 @@ impl OptionsUi {
                         Act::DeleteGpuDriver(id) => crate::gpu_drivers::remove(id),
                         Act::ImportGpuDriver => events.push(Event::ImportGpuDriver),
                         Act::RestartGame => events.push(Event::RestartGame),
-                        Act::ExportRepro => events.push(Event::ExportRepro),
                         Act::None => {}
                     }
                 }
@@ -6930,8 +6869,6 @@ impl OptionsUi {
                         Act::HudEditor => events.push(Event::HudEditor),
                         Act::AccessibilityHelp => events.push(Event::AccessibilityHelp),
                         Act::Credits => events.push(Event::Credits),
-                        Act::CopyAgentDetails => events.push(Event::CopyAgentDetails),
-                        Act::ToggleRecording => events.push(Event::ToggleRecording),
                         Act::DiagnosticsExport => events.push(Event::DiagnosticsExport),
                         Act::DiagnosticsOpen => events.push(Event::DiagnosticsOpen),
                         Act::DiagnosticsRecord => events.push(Event::DiagnosticsRecord),
@@ -6942,7 +6879,6 @@ impl OptionsUi {
                         Act::DeleteGpuDriver(id) => crate::gpu_drivers::remove(&id),
                         Act::ImportGpuDriver => events.push(Event::ImportGpuDriver),
                         Act::RestartGame => events.push(Event::RestartGame),
-                        Act::ExportRepro => events.push(Event::ExportRepro),
                         Act::SelectSkin(file) => self.select_skin(file),
                         Act::WardrobeTab(capes) => self.select_wardrobe_tab(capes),
                         Act::AutoRotateWardrobe => self.toggle_wardrobe_auto_rotate(),
@@ -7097,7 +7033,7 @@ mod tests {
     /// in the cached layout: after each step it equals one built fresh from
     /// the same state. Covers the wheel and a scrollbar drag, Tab and arrow
     /// focus movement that scrolls the list, search typing, clipboard paste
-    /// and cut, a modifier-only key bind and the Agent page's status.
+    /// and cut, a modifier-only key bind and more.
     #[test]
     fn the_cached_layout_follows_every_input() {
         use crate::clipboard::{EditShortcut, MemoryClipboard};
@@ -7229,12 +7165,6 @@ mod tests {
         fresh(&mut ui, &s, "waiting for a mod key", &mut stale);
         ui.key_released(&mut s, K::ShiftLeft);
         fresh(&mut ui, &s, "modifier-only bind", &mut stale);
-
-        // The Agent page's status and recording, as the game's poll sets them.
-        ui.show(Page::Agent);
-        fresh(&mut ui, &s, "agent page", &mut stale);
-        ui.set_agent_status(vec!["Running.".into()], true);
-        fresh(&mut ui, &s, "agent status", &mut stale);
 
         // The language page's search click moves the list back to the top.
         ui.show(Page::Language);
@@ -7676,9 +7606,9 @@ mod tests {
         }
         let s = Settings::default();
         let ui = OptionsUi::default();
-        for (code, shown) in [("fr_fr", "Sans IA : Non"), ("zh_cn", "关闭 AI：关")] {
+        for (code, shown) in [("fr_fr", "Pleine luminosité : Non"), ("zh_cn", "全亮：关")] {
             let (label, _) = lang::scoped(lang::Language::load(&[&Vanilla], code), || {
-                match ui.extra_button(&s, crate::extras::Item::NoAi).kind {
+                match ui.extra_button(&s, crate::extras::Item::Fullbright).kind {
                     WKind::Button { label, .. } => label.plain(),
                     _ => String::new(),
                 }
@@ -10328,36 +10258,11 @@ mod tests {
                 Page::Extras,
                 Page::NativeGame,
                 Page::SplitSetup,
-                Page::Agent,
                 Page::Pvp,
                 Page::Studio,
                 Page::ModBrowser,
             ]
         );
-        // No AI hides the AI Agent page.
-        let mut no_ai = Settings::default();
-        no_ai.extras.no_ai = true;
-        let (widgets, _, _, _) = ui.layout(&no_ai, 427.0, 240.0);
-        assert!(!widgets.iter().any(|w| matches!(
-            &w.kind,
-            WKind::Button {
-                act: Act::Push(Page::Agent),
-                ..
-            }
-        )));
-        // The AI Agent page: the switch, Copy and the status the game sets.
-        ui.push(Page::Agent);
-        ui.agent_status = vec!["Waiting for an agent.".into()];
-        let (widgets, _, _, _) = ui.layout(&s, 427.0, 240.0);
-        let acts: Vec<&Act> = widgets
-            .iter()
-            .filter_map(|w| match &w.kind {
-                WKind::Button { act, .. } => Some(act),
-                _ => None,
-            })
-            .collect();
-        assert!(acts.contains(&&Act::Extra(crate::extras::Item::AgentControl)));
-        assert!(acts.contains(&&Act::CopyAgentDetails));
         // Vanilla's own pages keep the Horizon pages they had.
         ui.stack = vec![Page::Main, Page::Video];
         let video = pushes(&mut ui);

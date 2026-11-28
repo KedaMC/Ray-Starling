@@ -81,7 +81,6 @@ pub(super) fn horizon_page_tooltip(page: Page) -> Option<&'static str> {
         Page::Controller => "horizon.pages.controller.tooltip",
         Page::Extras => "horizon.pages.extras.tooltip",
         Page::Pvp => "horizon.pages.pvp.tooltip",
-        Page::Agent => "horizon.pages.agent.tooltip",
         Page::SplitProfiles => "horizon.pages.split_profiles.tooltip",
         Page::ShaderPacks => "horizon.pages.shader_packs.tooltip",
         Page::GpuDrivers => "horizon.pages.gpu_drivers.tooltip",
@@ -105,11 +104,6 @@ impl OptionsUi {
         // Two to a row, as vanilla's OptionsList.addSmall lays out buttons; each opens
         // one of Starling's settings pages. Graphics opens only from here.
         let open = |key: &str, page: Page| button(0.0, 0.0, 150.0, tr(key), Act::Push(page));
-        let ai = if s.extras.no_ai {
-            self.extra_button(s, crate::extras::Item::NoAi)
-        } else {
-            open("horizon.pages.open.agent", Page::Agent)
-        };
         let split = if self.split_guest {
             Page::SplitProfiles
         } else {
@@ -120,11 +114,7 @@ impl OptionsUi {
             open("horizon.pages.open.extras", Page::Extras),
             open("horizon.pages.open.mods", Page::NativeGame),
             open("horizon.pages.open.split_setup", split),
-            ai,
         ];
-        if !s.extras.no_ai {
-            buttons.push(self.extra_button(s, crate::extras::Item::NoAi));
-        }
         buttons.push(open("horizon.pages.open.pvp", Page::Pvp));
         buttons.push(open("horizon.pages.open.studio", Page::Studio));
         buttons.push(open("horizon.mods.browse", Page::ModBrowser));
