@@ -151,10 +151,10 @@ impl OptionsUi {
                 ));
                 let entries = [
                     ("options.sounds", Some(Page::Sound)),
+                    ("options.controls", Some(Page::Controls)),
                     // Video Settings... is vanilla's page; Graphics and Shader Packs live
                     // under Starling Settings.
                     ("options.video", Some(Page::Video)),
-                    ("options.controls", Some(Page::Controls)),
                     (
                         "options.language",
                         (!self.split_guest).then_some(Page::Language),
