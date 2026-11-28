@@ -222,7 +222,6 @@ impl Game<'_> {
         }
         horizon_client::widgets::end_frame(self.frames);
         self.narrate_screen();
-        self.poll_repro(event_loop);
         self.poll_profile();
         self.advance_agent();
         for request in self.ui_wait.ready() {
@@ -237,9 +236,7 @@ impl Game<'_> {
                 break;
             }
         }
-        // A recording made from the F3 keys or the Settings page has no socket,
-        // and still wants its events.
-        if self.control.is_some() || self.repro.recording_active() {
+        if self.control.is_some() {
             self.watch_events();
         }
     }
@@ -417,9 +414,6 @@ impl Game<'_> {
         if let Some(value) = self.input_trace.command(&words)? {
             return Ok(Some(value));
         }
-        if let Some(value) = self.repro_command(&words, line, reply)? {
-            return Ok(value);
-        }
         if words[0] == "profile" {
             return self.profile_command(&words[1..], reply);
         }
@@ -470,7 +464,6 @@ impl Game<'_> {
                 .chain(super::perf::HELP)
                 .chain(super::touch::HELP)
                 .chain(super::input_trace::HELP)
-                .chain(super::repro::HELP)
                 .chain(super::studio::HELP)
                 .collect::<Vec<_>>() }))),
             "setblock" | "fill" | "particle" | "signedit" => self.render_command(&words),
@@ -1776,11 +1769,8 @@ impl Game<'_> {
         status["border"] = json!({ "center": self.border.center(), "size": self.border.size() });
         // The scoreboard sidebar the HUD shows.
         status["sidebar"] = self.sidebar_status();
-        // Who caused the input, and whether a repro recording runs.
-        let mut input = self.input_trace.summary();
-        self.repro
-            .fill_summary(&mut input, self.input_trace.events());
-        status["input"] = input;
+        // Who caused the input.
+        status["input"] = self.input_trace.summary();
         status
     }
 }

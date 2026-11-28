@@ -99,9 +99,6 @@ pub struct Extras {
     pub chat_animation: bool,
     /// The indicator bar at the left of a chat line (on by default, as vanilla).
     pub chat_indicator: bool,
-    /// F3+R and F3+E start/stop a repro recording and write its bundle (off by
-    /// default: a recording copies the world).
-    pub repro_keys: bool,
     /// Another controller can join P1's world (`splitscreen`, off by default).
     pub splitscreen: bool,
     /// Two players in one window: 0 auto (side by side when wider than tall), 1 side by side,
@@ -168,7 +165,6 @@ impl Default for Extras {
             emote_key: crate::keybinds::KeyBinds::default_of("key.emote").into(),
             chat_animation: false,
             chat_indicator: true,
-            repro_keys: false,
             splitscreen: false,
             splitscreen_two: 0,
             splitscreen_three: 0,
@@ -262,7 +258,6 @@ impl Extras {
                 EMOTE_KEY if value.starts_with("key.") => e.emote_key = value.to_owned(),
                 "chatAnimation" => e.chat_animation = flag(e.chat_animation),
                 "chatIndicator" => e.chat_indicator = flag(e.chat_indicator),
-                "reproKeys" => e.repro_keys = flag(e.repro_keys),
                 "splitscreen" => e.splitscreen = flag(e.splitscreen),
                 "splitscreenTwo" => e.splitscreen_two = value.parse().unwrap_or(0).min(2),
                 "splitscreenThree" => e.splitscreen_three = value.parse().unwrap_or(0).min(2),
@@ -291,7 +286,7 @@ impl Extras {
     }
     pub fn serialize(&self) -> String {
         let mut text = format!(
-            "packBrowser:{}\npregen:{}\nfullbright:{}\ndynamicLights:{}\nzoom:{}\nzoomKey:{}\nzoomLevel:{}\nzoomSmooth:{}\nzoomSensitivity:{}\nlodZoomDetail:{}\nfps:{}\nfpsCorner:{}\nfpsLows:{}\nkeystrokes:{}\nkeystrokesCorner:{}\nkeystrokesCps:{}\nmovedToMods:{}\nminimap:{}\nminimapCorner:{}\nminimapSize:{}\nminimapShape:{}\nminimapZoom:{}\nminimapRotate:{}\nautoReconnect:{}\nuiSoundReserve:{}\nownNameTag:{}\nskipModdedSplashesIfVanillaModified:{}\nhideBlockParticles:{}\nmouseTweaks:{}\nmouseTweaksWheel:{}\nsort:{}\nsortKey:{}\nchatAnimation:{}\nchatIndicator:{}\nreproKeys:{}\nsplitscreen:{}\nsplitscreenTwo:{}\nsplitscreenThree:{}\nsplitscreenNames:{}\nwheelCyclesListSettings:{}\nmusicOff:{}\nmusicPage:{}\n{}:{}\n",
+            "packBrowser:{}\npregen:{}\nfullbright:{}\ndynamicLights:{}\nzoom:{}\nzoomKey:{}\nzoomLevel:{}\nzoomSmooth:{}\nzoomSensitivity:{}\nlodZoomDetail:{}\nfps:{}\nfpsCorner:{}\nfpsLows:{}\nkeystrokes:{}\nkeystrokesCorner:{}\nkeystrokesCps:{}\nmovedToMods:{}\nminimap:{}\nminimapCorner:{}\nminimapSize:{}\nminimapShape:{}\nminimapZoom:{}\nminimapRotate:{}\nautoReconnect:{}\nuiSoundReserve:{}\nownNameTag:{}\nskipModdedSplashesIfVanillaModified:{}\nhideBlockParticles:{}\nmouseTweaks:{}\nmouseTweaksWheel:{}\nsort:{}\nsortKey:{}\nchatAnimation:{}\nchatIndicator:{}\nsplitscreen:{}\nsplitscreenTwo:{}\nsplitscreenThree:{}\nsplitscreenNames:{}\nwheelCyclesListSettings:{}\nmusicOff:{}\nmusicPage:{}\n{}:{}\n",
             bool_text(self.pack_browser),
             bool_text(self.pregen),
             bool_text(self.fullbright),
@@ -330,7 +325,6 @@ impl Extras {
             self.sort_key,
             bool_text(self.chat_animation),
             bool_text(self.chat_indicator),
-            bool_text(self.repro_keys),
             bool_text(self.splitscreen),
             self.splitscreen_two,
             self.splitscreen_three,
@@ -512,8 +506,6 @@ pub enum Item {
     ChatAnimation,
     /// The coloured bar at the left of a chat line.
     ChatIndicator,
-    /// The F3 recording shortcuts.
-    ReproKeys,
     /// On the Splitscreen settings page.
     Splitscreen,
     /// The Select Resource Packs screen's Add button (Modrinth).
@@ -566,7 +558,6 @@ impl Item {
             Item::MouseTweaksWheel => "horizon.extras.mouse_tweaks_wheel",
             Item::Sort => "horizon.extras.sort",
             Item::SortKey => "horizon.extras.sort_key",
-            Item::ReproKeys => "horizon.extras.repro_keys",
             Item::Splitscreen => "horizon.extras.splitscreen",
             Item::ChatAnimation => "horizon.extras.chat_animation",
             Item::ChatIndicator => "horizon.extras.chat_indicator",
@@ -589,7 +580,6 @@ impl Item {
             Item::MouseTweaksWheel => "horizon.extras.mouse_tweaks_wheel.tooltip",
             Item::Sort => "horizon.extras.sort.tooltip",
             Item::SortKey => "horizon.extras.sort_key.tooltip",
-            Item::ReproKeys => "horizon.extras.repro_keys.tooltip",
             Item::Splitscreen => "horizon.extras.splitscreen.tooltip",
             Item::ChatAnimation => "horizon.extras.chat_animation.tooltip",
             Item::ChatIndicator => "horizon.extras.chat_indicator.tooltip",
@@ -623,7 +613,6 @@ impl Item {
             Item::SortKey => "Sort key",
             Item::ChatAnimation => "Smooth chat",
             Item::ChatIndicator => "Message indicator",
-            Item::ReproKeys => "Recording shortcuts",
             Item::Splitscreen => "Splitscreen",
             Item::PackBrowser => "Resource pack browser",
             Item::Pregen => "Chunk pregeneration",
@@ -640,7 +629,7 @@ impl Item {
             ChatIndicator => ChatAnimation,
             Pvp(o) => return o.parent().map(Pvp),
             Fullbright | DynamicLights | OwnNameTag | HideBlockParticles | MouseTweaks | Sort
-            | AutoReconnect | ReproKeys | Splitscreen | ChatAnimation
+            | AutoReconnect | Splitscreen | ChatAnimation
             | MusicPage | PackBrowser | Pregen => {
                 return None;
             }
@@ -690,9 +679,6 @@ impl Item {
             Item::Splitscreen => {
                 "In a world, another controller can join as a new player: press A when it asks, then pick a profile and where to play."
             }
-            Item::ReproKeys => {
-                "F3+R starts or stops a repro recording and F3+E writes its bundle. Off by default: a recording copies the world."
-            }
             Item::Pvp(o) => o.description(),
             Item::PackBrowser => {
                 "Select Resource Packs gets an Add button that searches Modrinth and installs a pack into your packs folder. Off, the game never contacts Modrinth."
@@ -733,7 +719,6 @@ impl Item {
             Item::Sort => e.sort,
             Item::ChatAnimation => e.chat_animation,
             Item::ChatIndicator => e.chat_indicator,
-            Item::ReproKeys => e.repro_keys,
             Item::Splitscreen => e.splitscreen,
             Item::PackBrowser => e.pack_browser,
             Item::Pregen => e.pregen,
@@ -768,7 +753,6 @@ impl Item {
             Item::Sort => e.sort = !e.sort,
             Item::ChatAnimation => e.chat_animation = !e.chat_animation,
             Item::ChatIndicator => e.chat_indicator = !e.chat_indicator,
-            Item::ReproKeys => e.repro_keys = !e.repro_keys,
             Item::Splitscreen => e.splitscreen = !e.splitscreen,
             Item::PackBrowser => e.pack_browser = !e.pack_browser,
             Item::Pregen => e.pregen = !e.pregen,

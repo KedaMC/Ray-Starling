@@ -51,7 +51,6 @@ impl Game<'_> {
         // before its move, as a hit one tick later would be (an anticheat's Post check wants no
         // hit after the move of its tick).
         self.send_held_back();
-        self.repro_tick();
         // Hud.tick ends with ChatComponent.tick.
         let chat_ticks = self.visual_ticks();
         self.ui.chat.tick(&self.gui.atlas, chat_ticks);

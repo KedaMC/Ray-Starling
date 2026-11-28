@@ -326,8 +326,6 @@ impl Game<'_> {
                 std::thread::sleep(Duration::from_millis(1));
             }
         }
-        // A repro recording is finished and bundled before the process may go away.
-        self.repro_on_exit();
         self.finish_perf();
         if self.title.is_some() || self.saved_for_exit {
             return Ok(());
@@ -369,9 +367,6 @@ impl Game<'_> {
             self.close_studio_replay();
             return Ok(());
         }
-        // A recording cannot cross into another world, and a replay feeding the
-        // title screen is nonsense.
-        self.repro_world_closed();
         self.clear_waypoints();
         self.post_effects.clear();
         self.spectated_post_effect = None;

@@ -312,13 +312,9 @@ impl Game<'_> {
     }
     /// The HUD's clock this frame (`hud_kit::motion`): still, so overlays show their motion
     /// settled, while the game is paused, frame-stepped (`HORIZON_STILL`, a screenshot
-    /// sequence) or a repro recording or replay runs.
+    /// sequence).
     pub(super) fn hud_clock(&self) -> Clock {
-        let still = self.pause
-            || self.clock.still()
-            || self.screenshot_sequence.is_some()
-            || self.repro.recording_active()
-            || self.repro.replaying();
+        let still = self.pause || self.clock.still() || self.screenshot_sequence.is_some();
         Clock::new(std::time::Instant::now(), still)
     }
 

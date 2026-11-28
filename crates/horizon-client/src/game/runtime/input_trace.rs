@@ -5,9 +5,6 @@
 //! mistaking their keystrokes for its own. A `user-input` event also lands in
 //! `events` (and so in `wait-for event user-input`) when a person steps in
 //! while an agent was driving.
-//!
-//! The events are also what a repro recording writes to `inputs.jsonl`
-//! (game/runtime/repro.rs).
 use super::{Game, Screen};
 use horizon_client::{Result, keybinds};
 use serde::{Deserialize, Serialize};
@@ -333,10 +330,6 @@ impl InputTrace {
         self.writer = None;
         std::mem::take(&mut self.written)
     }
-    /// How many events this run has seen.
-    pub(super) fn events(&self) -> u64 {
-        self.seq
-    }
     /// A replay's own events are not new input.
     pub(super) fn set_suppress(&mut self, suppress: bool) {
         self.suppress = suppress;
@@ -400,12 +393,11 @@ impl Game<'_> {
     }
 
     /// Whether anything can read the trace: the control socket (agent control
-    /// on), the repro shortcuts, or a recording under way. Otherwise every key
-    /// and mouse motion skips it, so a player who uses none of them pays
-    /// nothing per input event.
+    /// on). Otherwise every key and mouse motion skips it, so a player
+    /// without it pays nothing per input event.
     fn tracing_input(&self) -> bool {
-        // Even physical key names can reconstruct a password. Neither the trace ring nor a
-        // repro recording may keep input while a password or two-factor field is focused.
+        // Even physical key names can reconstruct a password. The trace ring may not
+        // keep input while a password or two-factor field is focused.
         if self
             .title
             .as_ref()
@@ -413,7 +405,7 @@ impl Game<'_> {
         {
             return false;
         }
-        self.control.is_some() || self.settings.extras.repro_keys || self.repro.recording_active()
+        self.control.is_some()
     }
 
     /// Record an input event and, when a person steps into an agent's run, tell
@@ -433,7 +425,6 @@ impl Game<'_> {
             .record(self.ticks, origin, kind, agent_active)
         {
             let event = json!({ "event": "user-input", "input": kind_name });
-            self.repro.note_event(self.ticks, &event);
             self.events.note(self.ticks, event);
             log::info!(
                 "Horizon: {kind_name} input from a person while an agent was driving \

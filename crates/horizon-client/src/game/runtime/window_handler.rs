@@ -9,7 +9,7 @@ impl Game<'_> {
     /// focus stays as the run found it (`held_focus`) and its pointer grab stays inside the game
     /// (`internal_grab`).
     pub(super) fn scripted_run(&self) -> bool {
-        self.screenshot_sequence.is_some() || self.tick_script.playing() || self.repro.replaying()
+        self.screenshot_sequence.is_some() || self.tick_script.playing()
     }
 }
 

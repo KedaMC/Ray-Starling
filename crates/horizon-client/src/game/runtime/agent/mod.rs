@@ -583,11 +583,8 @@ impl Game<'_> {
             "busy": self.agent.task.as_ref().map(|t| t.name),
             "ticks": self.ticks,
         });
-        // Who caused the input, and whether a repro recording runs.
-        let mut input = self.input_trace.summary();
-        self.repro
-            .fill_summary(&mut input, self.input_trace.events());
-        state["input"] = input;
+        // Who caused the input.
+        state["input"] = self.input_trace.summary();
         state
     }
 

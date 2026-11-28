@@ -299,7 +299,6 @@ impl Game<'_> {
                 {
                     event["position"] = json!(at);
                 }
-                self.repro.note_event(self.ticks, &event);
                 self.events.push(self.ticks, event);
             }
         }

@@ -1822,8 +1822,6 @@ struct Game<'a> {
     events: events::Events,
     /// Who caused each input event: a person, an agent or the game (game/runtime/input_trace.rs).
     input_trace: input_trace::InputTrace,
-    /// A repro recording, export or replay (game/runtime/repro.rs).
-    repro: repro::Repro,
     /// The health history and client captures (game/profile_capture.rs).
     profile: profile_capture::Profile,
     /// `HORIZON_TICK_SCRIPT`'s scenario (game/world/tick_script.rs).
@@ -4625,7 +4623,6 @@ impl Game<'_> {
         // Only a server ticks its own world from here: its players are guests, swapped in for
         // their turns (`as_guest`), and the window's player is a client of it.
         self.ticks += 1;
-        self.repro_tick();
         self.track_experience_display();
         self.tick_enchanting_book();
         // `/tick freeze` stops the world but not the player.
@@ -11248,7 +11245,6 @@ impl<'a> Game<'a> {
             ui_wait: Default::default(),
             events: Default::default(),
             input_trace: Default::default(),
-            repro: Default::default(),
             profile: profile_capture::Profile::new(slow_frame_ms),
             tick_script: tick_script::TickScript::from_env(),
             agent: agent::Agent::default(),

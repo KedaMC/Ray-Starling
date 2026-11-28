@@ -806,18 +806,6 @@ impl Game<'_> {
                 self.toggle_debug_options();
                 true
             }
-            // Horizon's own: a repro recording for a bug report (game/runtime/repro.rs).
-            // Off unless the AI Agent page enables the shortcuts.
-            DebugAction::RecordSession if !self.settings.extras.repro_keys => false,
-            DebugAction::ExportRepro if !self.settings.extras.repro_keys => false,
-            DebugAction::RecordSession => {
-                self.toggle_recording_key();
-                true
-            }
-            DebugAction::ExportRepro => {
-                self.export_repro_key();
-                true
-            }
             DebugAction::DumpDynamicTextures => {
                 // `KeyboardHandler`: `TextureUtil.getDebugTexturePath` is the game
                 // folder's `screenshots/debug`; `TextureManager.dumpAllSheets` then
